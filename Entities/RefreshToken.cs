@@ -2,7 +2,7 @@
 {
     public class RefreshToken
     {
-        public Guid Id { get; set; }
+        public Guid Id { get; set; } = Guid.CreateVersion7();
         public Guid SessionId { get; set; }
         public string TokenHash { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; }

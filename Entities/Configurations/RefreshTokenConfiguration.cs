@@ -1,0 +1,29 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace AuthService.Entities.Configurations
+{
+    public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
+    {
+        public void Configure(EntityTypeBuilder<RefreshToken> builder)
+        {
+            builder.HasKey(r =>  r.Id);
+
+            builder.Property(r => r.TokenHash)
+                .IsRequired()
+                .HasMaxLength(512);
+            builder.Property(r => r.CreatedAt)
+                .IsRequired();
+            builder.Property(r => r.ExpiresAt)
+                .IsRequired();
+            builder.Property(r => r.Revoked)
+                .IsRequired()
+                .HasDefaultValue(false);
+
+            builder.HasOne(r => r.Session)
+                .WithMany(s => s.RefreshTokens)
+                .HasForeignKey(r => r.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+}

@@ -2,7 +2,7 @@
 {
     public class UserEmail
     {
-        public Guid Id { get; set; }
+        public Guid Id { get; set; } = Guid.CreateVersion7();
         public Guid UserId { get; set; }
         public string Email { get; set; } = null!;
         public bool IsPrimary { get; set; }
