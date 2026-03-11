@@ -3,11 +3,12 @@
     public class AuthProvider
     {
         public Guid Id { get; set; } = Guid.CreateVersion7();
-        public Guid UserId { get; set; }
+        
         public AuthProviderType Provider { get; set; }
         public string ProviderUserId { get; set; } = null!;
         public DateTimeOffset CreatedAt { get; set; }
 
+        public Guid UserId { get; set; }
         public User User { get; set; } = null!;
     }
 
