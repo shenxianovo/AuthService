@@ -25,7 +25,7 @@ namespace AuthService.Entities.Configurations
 
             builder.HasOne(s => s.User)
                 .WithMany(u => u.Sessions)
-                .HasForeignKey(s => s.User.Id)
+                .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
