@@ -19,14 +19,7 @@ namespace AuthService.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.ApplyConfiguration(new UserConfiguration());
-            modelBuilder.ApplyConfiguration(new UserEmailConfiguration());
-            modelBuilder.ApplyConfiguration(new PasswordCredentialConfiguration());
-            modelBuilder.ApplyConfiguration(new AuthProviderConfiguration());
-            modelBuilder.ApplyConfiguration(new SessionConfiguration());
-            modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
-            modelBuilder.ApplyConfiguration(new EmailVerificationConfiguration());
-            modelBuilder.ApplyConfiguration(new PasswordResetConfiguration());
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         }
     }
 }
