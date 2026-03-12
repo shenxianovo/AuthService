@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="AuthService.Tests/AuthService.Tests.csproj" Id="59f57f92-18e1-459f-93ab-8f6aed080c44" />
   <Project Path="AuthService/AuthService.csproj" />
 </Solution>
