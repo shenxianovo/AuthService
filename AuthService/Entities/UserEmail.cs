@@ -6,7 +6,7 @@
         
         public string Email { get; set; } = null!;
         public bool IsPrimary { get; set; }
-        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset? VerifiedAt { get; set; }
 
         public Guid UserId { get; set; }

@@ -5,7 +5,7 @@
         public Guid Id { get; set; } = Guid.CreateVersion7();
         public string Device { get; set; } = null!;
         public string IpAddress { get; set; } = null!;
-        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset ExpiresAt { get; set; }
         public bool Revoked { get; set; }
 

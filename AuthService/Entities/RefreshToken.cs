@@ -5,7 +5,7 @@
         public Guid Id { get; set; } = Guid.CreateVersion7();
         
         public string TokenHash { get; set; } = null!;
-        public DateTimeOffset CreatedAt { get; set; }
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
         public DateTimeOffset ExpiresAt { get; set; }
         public bool Revoked { get; set; }
 
