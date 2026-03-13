@@ -1,5 +1,4 @@
-using AuthService.Entities;
-using AuthService.Entities.Configurations;
+﻿using AuthService.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Data

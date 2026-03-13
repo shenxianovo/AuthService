@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AuthService.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace AuthService.Entities.Configurations
+namespace AuthService.Data.Configurations
 {
     public class EmailVerificationConfiguration : IEntityTypeConfiguration<EmailVerification>
     {
