@@ -16,8 +16,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.Section));
 builder.Services.AddSingleton<IJwtService, JwtService>();
 
+// Github OAuth
+builder.Services.Configure<GithubOAuthOptions>(builder.Configuration.GetSection(GithubOAuthOptions.Section));
+
 // Auth services
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
+builder.Services.AddHttpClient<IGithubAuthService, GithubAuthService>();
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
