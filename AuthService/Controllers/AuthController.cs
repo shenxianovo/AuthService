@@ -63,12 +63,19 @@ namespace AuthService.Controllers
         [HttpGet("github/callback")]
         public async Task<IActionResult> GithubCallback([FromQuery] string code)
         {
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var device = Request.Headers.UserAgent.ToString();
+            try
+            {
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                var device = Request.Headers.UserAgent.ToString();
 
-            var response = await githubAuthService.LoginAsync(code, ipAddress, device);
+                var response = await githubAuthService.LoginAsync(code, ipAddress, device);
 
-            return Ok(response);
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

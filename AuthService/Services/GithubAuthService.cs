@@ -153,9 +153,15 @@ namespace AuthService.Services
             
             response.EnsureSuccessStatusCode();
 
-            var result = await response.Content.ReadFromJsonAsync<GithubTokenResponse>();
+            var jsonContent = await response.Content.ReadAsStringAsync();
+            var result = System.Text.Json.JsonSerializer.Deserialize<GithubTokenResponse>(jsonContent);
 
-            return result!.AccessToken;
+            if (result == null || string.IsNullOrEmpty(result.AccessToken))
+            {
+                throw new InvalidOperationException($"Failed to exchange GitHub code. GitHub response: {jsonContent}");
+            }
+
+            return result.AccessToken;
         }
 
         private async Task<GithubUser> GetGithubUser(string accessToken)
