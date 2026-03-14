@@ -10,8 +10,8 @@ namespace AuthService.Services
     {
         public const string Section = "Jwt";
 
-        public string PrivateKeyPem { get; set; } = null!;
-        public string PublicKeyPem { get; set; } = null!;
+        public string PrivateKeyPath { get; set; } = null!;
+        public string PublicKeyPath { get; set; } = null!;
         public string Issuer { get; set; } = null!;
         public string Audience { get; set; } = null!;
         public int AccessTokenExpirationMinutes { get; set; } = 15;
@@ -35,11 +35,14 @@ namespace AuthService.Services
         {
             _options = options.Value;
 
+            var privateKeyPem = File.ReadAllText(_options.PrivateKeyPath);
+            var publicKeyPem = File.ReadAllText(_options.PublicKeyPath);
+
             _privateKey = RSA.Create();
-            _privateKey.ImportFromPem(_options.PrivateKeyPem);
+            _privateKey.ImportFromPem(privateKeyPem);
 
             _publicKey = RSA.Create();
-            _publicKey.ImportFromPem(_options.PublicKeyPem);
+            _publicKey.ImportFromPem(publicKeyPem);
         }
 
         public string GenerateAccessToken(Guid userId, Guid sessionId)
