@@ -49,19 +49,22 @@ namespace AuthService.Controllers
         }
 
         [HttpGet("github/login")]
-        public async Task<IActionResult> GithubLogin()
+        public async Task<IActionResult> GithubLogin([FromQuery] string? redirectUrl)
         {
+            var state = string.IsNullOrEmpty(redirectUrl) ? "" : Uri.EscapeDataString(redirectUrl);
+
             var url =
                 "https://github.com/login/oauth/authorize" +
                 $"?client_id={_githubOptions.ClientId}" +
                 $"&redirect_uri={Uri.EscapeDataString(_githubOptions.CallbackUrl)}" +
-                "&scope=user:email";
+                "&scope=user:email" +
+                (string.IsNullOrEmpty(state) ? "" : $"&state={state}");
 
             return Redirect(url);
         }
 
         [HttpGet("github/callback")]
-        public async Task<IActionResult> GithubCallback([FromQuery] string code)
+        public async Task<IActionResult> GithubCallback([FromQuery] string code, [FromQuery] string? state)
         {
             try
             {
@@ -70,10 +73,28 @@ namespace AuthService.Controllers
 
                 var response = await githubAuthService.LoginAsync(code, ipAddress, device);
 
+                if (!string.IsNullOrEmpty(state))
+                {
+                    var redirectUrl = Uri.UnescapeDataString(state);
+                    var queryParameters = new Dictionary<string, string?>
+                    {
+                        { "token", response.AccessToken },
+                        { "userId", response.UserId.ToString() }
+                    };
+                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, queryParameters);
+                    return Redirect(finalUrl);
+                }
+
                 return Ok(response);
             }
             catch (InvalidOperationException ex)
             {
+                if (!string.IsNullOrEmpty(state))
+                {
+                    var redirectUrl = Uri.UnescapeDataString(state);
+                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "error", ex.Message);
+                    return Redirect(finalUrl);
+                }
                 return BadRequest(new { message = ex.Message });
             }
         }
