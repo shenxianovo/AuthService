@@ -23,6 +23,7 @@ namespace AuthService.Services
     {
         string GenerateAccessToken(Guid userId, Guid sessionId);
         RsaSecurityKey GetPublicKey();
+        Guid? ValidateTokenAndGetUserId(string token);
     }
 
     public class JwtService : IJwtService
@@ -71,6 +72,36 @@ namespace AuthService.Services
         public RsaSecurityKey GetPublicKey()
         {
             return new RsaSecurityKey(_publicKey);
+        }
+
+        public Guid? ValidateTokenAndGetUserId(string token)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _options.Issuer,
+                ValidAudience = _options.Audience,
+                IssuerSigningKey = GetPublicKey()
+            };
+
+            try
+            {
+                var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
+                var userIdStr = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (Guid.TryParse(userIdStr, out var userId))
+                {
+                    return userId;
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

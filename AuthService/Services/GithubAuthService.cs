@@ -20,7 +20,7 @@ namespace AuthService.Services
 
     public interface IGithubAuthService
     {
-        Task<AuthResponse> LoginAsync(string code, string ipAddress, string device);
+        Task<AuthResponse> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null);
     }
 
     public class GithubAuthService(
@@ -31,7 +31,7 @@ namespace AuthService.Services
     {
         private readonly GithubOAuthOptions _options = options.Value;
 
-        public async Task<AuthResponse> LoginAsync(string code, string ipAddress, string device)
+        public async Task<AuthResponse> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null)
         {
             var token = await ExchangeCode(code);
             var githubUser = await GetGithubUser(token);
@@ -40,7 +40,8 @@ namespace AuthService.Services
                 AuthProviderType.Github,
                 githubUser.Id.ToString(),
                 githubUser.Email,
-                githubUser.Login);
+                githubUser.Login,
+                currentUserId);
 
             return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }

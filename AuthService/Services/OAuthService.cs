@@ -6,12 +6,12 @@ namespace AuthService.Services
 {
     public interface IOAuthService
     {
-        Task<User> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName);
+        Task<User> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null);
     }
 
     public class OAuthService(AppDbContext db) : IOAuthService
     {
-        public async Task<User> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName)
+        public async Task<User> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null)
         {
             var authProvider = await db.AuthProviders
                 .Include(a => a.User)
@@ -24,23 +24,17 @@ namespace AuthService.Services
                 user = authProvider.User;
                 if (user.IsDeleted)
                     throw new UnauthorizedAccessException("User is deleted.");
+                    
+                if (currentUserId.HasValue && user.Id != currentUserId.Value)
+                    throw new InvalidOperationException("This third-party account is already bound to another user.");
             }
             else
             {
-                UserEmail? userEmail = null;
-                if (!string.IsNullOrEmpty(email))
+                if (currentUserId.HasValue)
                 {
-                    userEmail = await db.UserEmails
-                        .Include(e => e.User)
-                        .FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
-                }
-
-                if (userEmail is not null)
-                {
-                    user = userEmail.User;
-                    if (user.IsDeleted)
-                        throw new UnauthorizedAccessException("User is deleted.");
-                    
+                    user = await db.Users.FindAsync(currentUserId.Value) 
+                        ?? throw new UnauthorizedAccessException("Current user not found.");
+                        
                     authProvider = new AuthProvider
                     {
                         UserId = user.Id,
@@ -48,32 +42,71 @@ namespace AuthService.Services
                         ProviderUserId = providerUserId
                     };
                     db.AuthProviders.Add(authProvider);
-                }
-                else
-                {
-                    user = new User
-                    {
-                        DisplayName = displayName,
-                    };
-                    db.Users.Add(user);
 
                     if (!string.IsNullOrEmpty(email))
                     {
-                        db.UserEmails.Add(new UserEmail
+                        var emailExists = await db.UserEmails.AnyAsync(e => e.Email == email.ToLowerInvariant());
+                        if (!emailExists)
                         {
-                            UserId = user.Id,
-                            Email = email.ToLowerInvariant(),
-                            IsPrimary = true
-                        });
+                            db.UserEmails.Add(new UserEmail
+                            {
+                                UserId = user.Id,
+                                Email = email.ToLowerInvariant(),
+                                IsPrimary = !await db.UserEmails.AnyAsync(e => e.UserId == user.Id && e.IsPrimary)
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    UserEmail? userEmail = null;
+                    if (!string.IsNullOrEmpty(email))
+                    {
+                        userEmail = await db.UserEmails
+                            .Include(e => e.User)
+                            .FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
                     }
 
-                    authProvider = new AuthProvider
+                    if (userEmail is not null)
                     {
-                        UserId = user.Id,
-                        Provider = provider,
-                        ProviderUserId = providerUserId
-                    };
-                    db.AuthProviders.Add(authProvider);
+                        user = userEmail.User;
+                        if (user.IsDeleted)
+                            throw new UnauthorizedAccessException("User is deleted.");
+                        
+                        authProvider = new AuthProvider
+                        {
+                            UserId = user.Id,
+                            Provider = provider,
+                            ProviderUserId = providerUserId
+                        };
+                        db.AuthProviders.Add(authProvider);
+                    }
+                    else
+                    {
+                        user = new User
+                        {
+                            DisplayName = displayName,
+                        };
+                        db.Users.Add(user);
+
+                        if (!string.IsNullOrEmpty(email))
+                        {
+                            db.UserEmails.Add(new UserEmail
+                            {
+                                UserId = user.Id,
+                                Email = email.ToLowerInvariant(),
+                                IsPrimary = true
+                            });
+                        }
+
+                        authProvider = new AuthProvider
+                        {
+                            UserId = user.Id,
+                            Provider = provider,
+                            ProviderUserId = providerUserId
+                        };
+                        db.AuthProviders.Add(authProvider);
+                    }
                 }
             }
             

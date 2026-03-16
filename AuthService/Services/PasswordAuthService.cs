@@ -11,6 +11,7 @@ namespace AuthService.Services
     {
         Task<AuthResponse> RegisterAsync(RegisterRequest request, string ipAddress, string device);
         Task<AuthResponse> LoginAsync(LoginRequest request, string ipAddress, string device);
+        Task AddPasswordAsync(Guid userId, string password);
     }
 
     public class PasswordAuthService(
@@ -78,6 +79,37 @@ namespace AuthService.Services
             var user = userEmail.User;
 
             return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+        }
+
+        public async Task AddPasswordAsync(Guid userId, string password)
+        {
+            var user = await db.Users
+                .Include(u => u.PasswordCredential)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+                
+            if (user is null)
+                throw new InvalidOperationException("User not found.");
+                
+            if (user.PasswordCredential is not null)
+                throw new InvalidOperationException("User already has a password.");
+                
+            var credential = new PasswordCredential
+            {
+                UserId = userId,
+                PasswordHash = HashPassword(password)
+            };
+            
+            db.PasswordCredentials.Add(credential);
+            
+            var authProvider = new AuthProvider
+            {
+                Provider = AuthProviderType.Password,
+                ProviderUserId = userId.ToString(),
+                UserId = userId
+            };
+            db.AuthProviders.Add(authProvider);
+            
+            await db.SaveChangesAsync();
         }
 
         // --- Password hashing (BCrypt-like using PBKDF2) ---
