@@ -15,11 +15,8 @@ namespace AuthService.Services
 
     public class PasswordAuthService(
         AppDbContext db,
-        IJwtService jwtService,
-        IOptions<JwtOptions> jwtOptions) : IPasswordAuthService
+        SessionService sessionService) : IPasswordAuthService
     {
-        private readonly JwtOptions _jwtOptions = jwtOptions.Value;
-
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request, string ipAddress, string device)
         {
             // Check if email already exists
@@ -53,40 +50,12 @@ namespace AuthService.Services
                 UserId = user.Id,
             };
 
-            var session = new Session
-            {
-                UserId = user.Id,
-                Device = device,
-                IpAddress = ipAddress,
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.SessionExpirationDays),
-            };
-
-            var refreshTokenRaw = GenerateRefreshToken();
-            var refreshToken = new RefreshToken
-            {
-                SessionId = session.Id,
-                TokenHash = HashToken(refreshTokenRaw),
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
-            };
-
             db.Users.Add(user);
             db.UserEmails.Add(userEmail);
             db.PasswordCredentials.Add(passwordCredential);
             db.AuthProviders.Add(authProvider);
-            db.Sessions.Add(session);
-            db.RefreshTokens.Add(refreshToken);
 
-            await db.SaveChangesAsync();
-
-            var accessToken = jwtService.GenerateAccessToken(user.Id, session.Id);
-
-            return new AuthResponse
-            {
-                UserId = user.Id,
-                AccessToken = accessToken,
-                RefreshToken = refreshTokenRaw,
-                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
-            };
+            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request, string ipAddress, string device)
@@ -108,36 +77,7 @@ namespace AuthService.Services
 
             var user = userEmail.User;
 
-            var session = new Session
-            {
-                UserId = user.Id,
-                Device = device,
-                IpAddress = ipAddress,
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.SessionExpirationDays),
-            };
-
-            var refreshTokenRaw = GenerateRefreshToken();
-            var refreshToken = new RefreshToken
-            {
-                SessionId = session.Id,
-                TokenHash = HashToken(refreshTokenRaw),
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
-            };
-
-            db.Sessions.Add(session);
-            db.RefreshTokens.Add(refreshToken);
-
-            await db.SaveChangesAsync();
-
-            var accessToken = jwtService.GenerateAccessToken(user.Id, session.Id);
-
-            return new AuthResponse
-            {
-                UserId = user.Id,
-                AccessToken = accessToken,
-                RefreshToken = refreshTokenRaw,
-                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
-            };
+            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }
 
         // --- Password hashing (BCrypt-like using PBKDF2) ---
@@ -159,20 +99,6 @@ namespace AuthService.Services
             var actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 100_000, HashAlgorithmName.SHA256, 32);
 
             return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
-        }
-
-        // --- Refresh token generation ---
-
-        private static string GenerateRefreshToken()
-        {
-            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
-        }
-
-        private static string HashToken(string token)
-        {
-            var bytes = Convert.FromBase64String(token);
-            var hash = SHA256.HashData(bytes);
-            return Convert.ToBase64String(hash);
         }
     }
 }

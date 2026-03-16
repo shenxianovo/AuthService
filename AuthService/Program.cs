@@ -29,6 +29,8 @@ builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.Configure<GithubOAuthOptions>(builder.Configuration.GetSection(GithubOAuthOptions.Section));
 
 // Auth services
+builder.Services.AddScoped<SessionService>();
+builder.Services.AddScoped<IOAuthService, OAuthService>();
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
 builder.Services.AddHttpClient<IGithubAuthService, GithubAuthService>();
 

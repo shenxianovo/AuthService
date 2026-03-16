@@ -34,7 +34,9 @@ namespace AuthService.Tests.Unit.Services
                 SessionExpirationDays = 30,
             });
 
-            _sut = new PasswordAuthService(_db, _jwtServiceMock.Object, _jwtOptions);
+            var sessionService = new SessionService(_db, _jwtServiceMock.Object, _jwtOptions);
+
+            _sut = new PasswordAuthService(_db, sessionService);
         }
 
         public void Dispose() => _db.Dispose();
