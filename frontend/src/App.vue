@@ -9,7 +9,28 @@
         <p><strong>Access Token:</strong></p>
         <textarea readonly :value="authData.accessToken"></textarea>
       </div>
-      <button @click="logout" class="btn danger">Logout</button>
+      
+      <div class="card form-container">
+        <h3>Account Settings</h3>
+        
+        <div class="form-group">
+          <label>Add/Set Password:</label>
+          <div style="display: flex; gap: 10px;">
+            <input type="password" v-model="addPasswordForm.password" placeholder="New Password" />
+            <button class="btn secondary" @click="handleAddPassword" :disabled="loading || !addPasswordForm.password">
+              Save Password
+            </button>
+          </div>
+        </div>
+
+        <div class="divider">or</div>
+        
+        <button type="button" class="btn github-btn" @click="handleGithubBind" :disabled="loading">
+          Bind GitHub Account
+        </button>
+      </div>
+
+      <button @click="logout" class="btn danger" style="margin-top: 20px;">Logout</button>
     </div>
 
     <div v-else>
@@ -85,6 +106,9 @@ export default {
         email: '',
         password: ''
       },
+      addPasswordForm: {
+        password: ''
+      },
       // Read the API URL from Vite environment variables (.env files)
       apiUrl: import.meta.env.VITE_API_URL || '/api/v1/auth'
     }
@@ -153,6 +177,38 @@ export default {
     handleGithubLogin() {
       const redirectUrl = window.location.origin + window.location.pathname;
       window.location.href = `${this.apiUrl}/github/login?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    },
+    handleGithubBind() {
+      const redirectUrl = window.location.origin + window.location.pathname;
+      const token = this.authData.accessToken;
+      window.location.href = `${this.apiUrl}/github/login?redirectUrl=${encodeURIComponent(redirectUrl)}&token=${encodeURIComponent(token)}`;
+    },
+    async handleAddPassword() {
+      this.resetMessages();
+      this.loading = true;
+      try {
+        const response = await fetch(`${this.apiUrl}/add-password`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authData.accessToken}`
+          },
+          body: JSON.stringify(this.addPasswordForm)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+           throw new Error(data.message || 'Failed to add password');
+        }
+
+        this.successMsg = 'Password successfully added/updated!';
+        this.addPasswordForm.password = '';
+      } catch (err) {
+        this.error = err.message;
+      } finally {
+        this.loading = false;
+      }
     }
   },
   async mounted() {
