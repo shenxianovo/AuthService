@@ -28,6 +28,9 @@
         <button type="button" class="btn github-btn" @click="handleGithubBind" :disabled="loading">
           Bind GitHub Account
         </button>
+        <button type="button" class="btn google-btn" @click="handleGoogleBind" :disabled="loading">
+          Bind Google Account
+        </button>
       </div>
 
       <button @click="logout" class="btn danger" style="margin-top: 20px;">Logout</button>
@@ -77,6 +80,9 @@
           
           <button type="button" class="btn github-btn" @click="handleGithubLogin" :disabled="loading">
             Login with GitHub
+          </button>
+          <button type="button" class="btn google-btn" @click="handleGoogleLogin" :disabled="loading">
+            Login with Google
           </button>
         </form>
       </div>
@@ -183,6 +189,15 @@ export default {
       const token = this.authData.accessToken;
       window.location.href = `${this.apiUrl}/github/login?redirectUrl=${encodeURIComponent(redirectUrl)}&token=${encodeURIComponent(token)}`;
     },
+    handleGoogleLogin() {
+      const redirectUrl = window.location.origin + window.location.pathname;
+      window.location.href = `${this.apiUrl}/google/login?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+    },
+    handleGoogleBind() {
+      const redirectUrl = window.location.origin + window.location.pathname;
+      const token = this.authData.accessToken;
+      window.location.href = `${this.apiUrl}/google/login?redirectUrl=${encodeURIComponent(redirectUrl)}&token=${encodeURIComponent(token)}`;
+    },
     async handleAddPassword() {
       this.resetMessages();
       this.loading = true;
@@ -224,11 +239,11 @@ export default {
         userId: userId,
       };
       this.authenticated = true;
-      this.successMsg = 'GitHub login successful!';
+      this.successMsg = 'OAuth login successful!';
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (error) {
-      this.error = `GitHub login failed: ${error}`;
+      this.error = `OAuth login failed: ${error}`;
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
@@ -307,6 +322,8 @@ h2 {
 .btn.danger { background: #dc3545; }
 .btn.github-btn { background: #24292e; color: white; margin-top: 10px; }
 .btn.github-btn:hover { background: #1b1f23; }
+.btn.google-btn { background: #4285f4; color: white; margin-top: 10px; }
+.btn.google-btn:hover { background: #3367d6; }
 
 .divider {
   text-align: center;
