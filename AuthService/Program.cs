@@ -8,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
+builder.Services.AddDataProtection();
 
 // nginx forwarded headers
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -35,6 +37,7 @@ builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
+builder.Services.AddSingleton<IOAuthSecurityService, OAuthSecurityService>();
 builder.Services.AddHttpClient<IGithubAuthService, GithubAuthService>();
 builder.Services.AddHttpClient<IGoogleAuthService, GoogleAuthService>();
 

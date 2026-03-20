@@ -5,6 +5,7 @@ using AuthService.Entities;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -16,9 +17,9 @@ namespace AuthService.Controllers
         IPasswordAuthService passwordAuthService,
         IGithubAuthService githubAuthService,
         IGoogleAuthService googleAuthService,
+        IOAuthSecurityService oauthSecurity,
         IOptions<GithubOAuthOptions> githubOptions,
         IOptions<GoogleOAuthOptions> googleOptions,
-        IJwtService jwtService,
         AppDbContext db) : ControllerBase
     {
         private readonly GithubOAuthOptions _githubOptions = githubOptions.Value;
@@ -58,17 +59,26 @@ namespace AuthService.Controllers
             }
         }
 
-        [HttpGet("github/login")]
-        public async Task<IActionResult> GithubLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
-        {
-            var stateObj = new Dictionary<string, string>();
-            if (!string.IsNullOrEmpty(redirectUrl)) stateObj["redirectUrl"] = redirectUrl;
-            if (!string.IsNullOrEmpty(token)) stateObj["token"] = token; // MVP approach: pass token in state to bind
-            
-            var state = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(stateObj)));
+        // ===================== GitHub OAuth =====================
 
-            var url =
-                "https://github.com/login/oauth/authorize" +
+        [HttpGet("github/login")]
+        public IActionResult GithubLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
+        {
+            // Validate redirect URL against whitelist
+            oauthSecurity.ValidateRedirectUrl(redirectUrl);
+
+            // Parse binding userId from JWT (if provided)
+            Guid? userId = null;
+            if (!string.IsNullOrEmpty(token))
+            {
+                var userIdClaim = GetUserIdFromAuthHeader();
+                userId = userIdClaim;
+            }
+
+            // Generate signed state (tamper-proof, with CSRF nonce and expiry)
+            var state = oauthSecurity.GenerateState(redirectUrl, userId);
+
+            var url = "https://github.com/login/oauth/authorize" +
                 $"?client_id={_githubOptions.ClientId}" +
                 $"&redirect_uri={Uri.EscapeDataString(_githubOptions.CallbackUrl)}" +
                 "&scope=user:email" +
@@ -80,80 +90,27 @@ namespace AuthService.Controllers
         [HttpGet("github/callback")]
         public async Task<IActionResult> GithubCallback([FromQuery] string code, [FromQuery] string? state)
         {
-            try
-            {
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                var device = Request.Headers.UserAgent.ToString();
-
-                string? redirectUrl = null;
-                Guid? currentUserId = null;
-
-                if (!string.IsNullOrEmpty(state))
-                {
-                    try
-                    {
-                        var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(state));
-                        var stateObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
-                        if (stateObj != null)
-                        {
-                            if (stateObj.TryGetValue("redirectUrl", out var r)) redirectUrl = r;
-                            if (stateObj.TryGetValue("token", out var t)) currentUserId = jwtService.ValidateTokenAndGetUserId(t);
-                        }
-                    }
-                    catch
-                    {
-                        // ignore state parsing error
-                    }
-                }
-
-                var response = await githubAuthService.LoginAsync(code, ipAddress, device, currentUserId);
-
-                if (!string.IsNullOrEmpty(redirectUrl))
-                {
-                    var queryParameters = new Dictionary<string, string?>
-                    {
-                        { "token", response.AccessToken },
-                        { "userId", response.UserId.ToString() }
-                    };
-                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, queryParameters);
-                    return Redirect(finalUrl);
-                }
-
-                return Ok(response);
-            }
-            catch (InvalidOperationException ex)
-            {
-                string? redirectUrl = null;
-                if (!string.IsNullOrEmpty(state))
-                {
-                    try
-                    {
-                        var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(state));
-                        var stateObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
-                        if (stateObj != null && stateObj.TryGetValue("redirectUrl", out var r)) redirectUrl = r;
-                    }
-                    catch { }
-                }
-
-                if (!string.IsNullOrEmpty(redirectUrl))
-                {
-                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "error", ex.Message);
-                    return Redirect(finalUrl);
-                }
-                return BadRequest(new { message = ex.Message });
-            }
+            return await HandleOAuthCallback(
+                state,
+                (ipAddress, device, currentUserId) => githubAuthService.LoginAsync(code, ipAddress, device, currentUserId));
         }
+
+        // ===================== Google OAuth =====================
+
         [HttpGet("google/login")]
-        public async Task<IActionResult> GoogleLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
+        public IActionResult GoogleLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
         {
-            var stateObj = new Dictionary<string, string>();
-            if (!string.IsNullOrEmpty(redirectUrl)) stateObj["redirectUrl"] = redirectUrl;
-            if (!string.IsNullOrEmpty(token)) stateObj["token"] = token;
+            oauthSecurity.ValidateRedirectUrl(redirectUrl);
 
-            var state = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(stateObj)));
+            Guid? userId = null;
+            if (!string.IsNullOrEmpty(token))
+            {
+                userId = GetUserIdFromAuthHeader();
+            }
 
-            var url =
-                "https://accounts.google.com/o/oauth2/v2/auth" +
+            var state = oauthSecurity.GenerateState(redirectUrl, userId);
+
+            var url = "https://accounts.google.com/o/oauth2/v2/auth" +
                 $"?client_id={_googleOptions.ClientId}" +
                 $"&redirect_uri={Uri.EscapeDataString(_googleOptions.CallbackUrl)}" +
                 "&response_type=code" +
@@ -166,69 +123,33 @@ namespace AuthService.Controllers
         [HttpGet("google/callback")]
         public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string? state)
         {
-            try
-            {
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                var device = Request.Headers.UserAgent.ToString();
-
-                string? redirectUrl = null;
-                Guid? currentUserId = null;
-
-                if (!string.IsNullOrEmpty(state))
-                {
-                    try
-                    {
-                        var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(state));
-                        var stateObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
-                        if (stateObj != null)
-                        {
-                            if (stateObj.TryGetValue("redirectUrl", out var r)) redirectUrl = r;
-                            if (stateObj.TryGetValue("token", out var t)) currentUserId = jwtService.ValidateTokenAndGetUserId(t);
-                        }
-                    }
-                    catch
-                    {
-                        // ignore state parsing error
-                    }
-                }
-
-                var response = await googleAuthService.LoginAsync(code, ipAddress, device, currentUserId);
-
-                if (!string.IsNullOrEmpty(redirectUrl))
-                {
-                    var queryParameters = new Dictionary<string, string?>
-                    {
-                        { "token", response.AccessToken },
-                        { "userId", response.UserId.ToString() }
-                    };
-                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, queryParameters);
-                    return Redirect(finalUrl);
-                }
-
-                return Ok(response);
-            }
-            catch (InvalidOperationException ex)
-            {
-                string? redirectUrl = null;
-                if (!string.IsNullOrEmpty(state))
-                {
-                    try
-                    {
-                        var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(state));
-                        var stateObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
-                        if (stateObj != null && stateObj.TryGetValue("redirectUrl", out var r)) redirectUrl = r;
-                    }
-                    catch { }
-                }
-
-                if (!string.IsNullOrEmpty(redirectUrl))
-                {
-                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "error", ex.Message);
-                    return Redirect(finalUrl);
-                }
-                return BadRequest(new { message = ex.Message });
-            }
+            return await HandleOAuthCallback(
+                state,
+                (ipAddress, device, currentUserId) => googleAuthService.LoginAsync(code, ipAddress, device, currentUserId));
         }
+
+        // ===================== Auth Code Exchange =====================
+
+        /// <summary>
+        /// Exchange a one-time authorization code for tokens (POST, no tokens in URL).
+        /// </summary>
+        [HttpPost("exchange")]
+        public IActionResult ExchangeCode([FromBody] ExchangeCodeRequest request)
+        {
+            var payload = oauthSecurity.ExchangeAuthCode(request.Code);
+            if (payload == null)
+                return BadRequest(new { message = "Invalid or expired authorization code." });
+
+            return Ok(new AuthResponse
+            {
+                UserId = payload.UserId,
+                AccessToken = payload.AccessToken,
+                RefreshToken = payload.RefreshToken,
+                ExpiresAt = payload.ExpiresAt
+            });
+        }
+
+        // ===================== Account Management =====================
 
         [Authorize]
         [HttpPost("add-password")]
@@ -238,9 +159,7 @@ namespace AuthService.Controllers
             {
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!Guid.TryParse(userIdClaim, out var userId))
-                {
                     return Unauthorized();
-                }
 
                 await passwordAuthService.AddPasswordAsync(userId, request.Password);
                 return Ok(new { message = "Password added successfully." });
@@ -289,6 +208,72 @@ namespace AuthService.Controllers
                         LinkedAt = p.CreatedAt
                     }).ToList()
             });
+        }
+
+        // ===================== Helpers =====================
+
+        /// <summary>
+        /// Unified OAuth callback handler. Validates signed state, performs login,
+        /// generates a one-time auth code, and redirects with code (not token).
+        /// </summary>
+        private async Task<IActionResult> HandleOAuthCallback(
+            string? state,
+            Func<string, string, Guid?, Task<AuthResponse>> loginAction)
+        {
+            // Validate signed state
+            OAuthStatePayload? statePayload = null;
+            if (!string.IsNullOrEmpty(state))
+            {
+                statePayload = oauthSecurity.ValidateState(state);
+                if (statePayload == null)
+                    return BadRequest(new { message = "Invalid or expired OAuth state." });
+            }
+
+            string? redirectUrl = statePayload?.RedirectUrl;
+            Guid? currentUserId = statePayload?.UserId;
+
+            try
+            {
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                var device = Request.Headers.UserAgent.ToString();
+
+                var response = await loginAction(ipAddress, device, currentUserId);
+
+                if (!string.IsNullOrEmpty(redirectUrl))
+                {
+                    // Generate one-time auth code instead of passing tokens in URL
+                    var authCode = oauthSecurity.GenerateAuthCode(
+                        response.UserId, response.AccessToken, response.RefreshToken, response.ExpiresAt);
+
+                    var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "code", authCode);
+                    return Redirect(finalUrl);
+                }
+
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                if (!string.IsNullOrEmpty(redirectUrl))
+                {
+                    var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "error", ex.Message);
+                    return Redirect(finalUrl);
+                }
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Extract user ID from the Authorization header JWT (for binding flows).
+        /// </summary>
+        private Guid? GetUserIdFromAuthHeader()
+        {
+            var authHeader = Request.Headers.Authorization.ToString();
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                return null;
+
+            var token = authHeader["Bearer ".Length..];
+            var jwtSvc = HttpContext.RequestServices.GetRequiredService<IJwtService>();
+            return jwtSvc.ValidateTokenAndGetUserId(token);
         }
     }
 }

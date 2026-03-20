@@ -329,21 +329,30 @@ export default {
       this.externalRedirect = redirect;
     }
 
-    // Check for OAuth callback token from the backend redirect
-    const token = urlParams.get('token');
-    const userId = urlParams.get('userId');
+    // Check for OAuth callback with one-time authorization code
+    const authCode = urlParams.get('code');
     const error = urlParams.get('error');
     
-    if (token && userId) {
-      this.authData = {
-        accessToken: token,
-        userId: userId,
-      };
-      this.authenticated = true;
-      this.successMsg = 'OAuth login successful!';
-      await this.fetchUserInfo();
-      // Clean up URL parameters
+    if (authCode) {
+      // Clean up URL immediately to prevent code reuse/leaking
       window.history.replaceState({}, document.title, window.location.pathname);
+      try {
+        const response = await fetch(`${this.apiUrl}/exchange`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: authCode })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || 'Code exchange failed');
+        }
+        this.authData = data;
+        this.authenticated = true;
+        this.successMsg = 'OAuth login successful!';
+        await this.fetchUserInfo();
+      } catch (err) {
+        this.error = err.message;
+      }
     } else if (error) {
       this.error = `OAuth login failed: ${error}`;
       window.history.replaceState({}, document.title, window.location.pathname);
