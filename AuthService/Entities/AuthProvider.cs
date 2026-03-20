@@ -15,6 +15,7 @@
     public enum AuthProviderType
     {
         Password = 0,
-        Github = 1
+        Github = 1,
+        Google = 2
     }
 }

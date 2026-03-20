@@ -21,4 +21,7 @@ jobs:
             export GithubOAuth__ClientId="${{ secrets.GH_OAUTH_CLIENT_ID }}"
             export GithubOAuth__ClientSecret="${{ secrets.GH_OAUTH_CLIENT_SECRET }}"
             export GithubOAuth__CallbackUrl="${{ secrets.GH_OAUTH_CALLBACK_URL }}"
+            export GoogleOAuth__ClientId="${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
+            export GoogleOAuth__ClientSecret="${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}"
+            export GoogleOAuth__CallbackUrl="${{ secrets.GOOGLE_OAUTH_CALLBACK_URL }}"
             bash /srv/AuthService/deploy/deploy.sh

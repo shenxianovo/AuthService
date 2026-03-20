@@ -12,10 +12,13 @@ namespace AuthService.Controllers
     public class AuthController(
         IPasswordAuthService passwordAuthService,
         IGithubAuthService githubAuthService,
+        IGoogleAuthService googleAuthService,
         IOptions<GithubOAuthOptions> githubOptions,
+        IOptions<GoogleOAuthOptions> googleOptions,
         IJwtService jwtService) : ControllerBase
     {
         private readonly GithubOAuthOptions _githubOptions = githubOptions.Value;
+        private readonly GoogleOAuthOptions _googleOptions = googleOptions.Value;
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
@@ -136,6 +139,93 @@ namespace AuthService.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpGet("google/login")]
+        public async Task<IActionResult> GoogleLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
+        {
+            var stateObj = new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(redirectUrl)) stateObj["redirectUrl"] = redirectUrl;
+            if (!string.IsNullOrEmpty(token)) stateObj["token"] = token;
+
+            var state = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(stateObj)));
+
+            var url =
+                "https://accounts.google.com/o/oauth2/v2/auth" +
+                $"?client_id={_googleOptions.ClientId}" +
+                $"&redirect_uri={Uri.EscapeDataString(_googleOptions.CallbackUrl)}" +
+                "&response_type=code" +
+                "&scope=openid%20email%20profile" +
+                $"&state={Uri.EscapeDataString(state)}";
+
+            return Redirect(url);
+        }
+
+        [HttpGet("google/callback")]
+        public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string? state)
+        {
+            try
+            {
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                var device = Request.Headers.UserAgent.ToString();
+
+                string? redirectUrl = null;
+                Guid? currentUserId = null;
+
+                if (!string.IsNullOrEmpty(state))
+                {
+                    try
+                    {
+                        var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(state));
+                        var stateObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
+                        if (stateObj != null)
+                        {
+                            if (stateObj.TryGetValue("redirectUrl", out var r)) redirectUrl = r;
+                            if (stateObj.TryGetValue("token", out var t)) currentUserId = jwtService.ValidateTokenAndGetUserId(t);
+                        }
+                    }
+                    catch
+                    {
+                        // ignore state parsing error
+                    }
+                }
+
+                var response = await googleAuthService.LoginAsync(code, ipAddress, device, currentUserId);
+
+                if (!string.IsNullOrEmpty(redirectUrl))
+                {
+                    var queryParameters = new Dictionary<string, string?>
+                    {
+                        { "token", response.AccessToken },
+                        { "userId", response.UserId.ToString() }
+                    };
+                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, queryParameters);
+                    return Redirect(finalUrl);
+                }
+
+                return Ok(response);
+            }
+            catch (InvalidOperationException ex)
+            {
+                string? redirectUrl = null;
+                if (!string.IsNullOrEmpty(state))
+                {
+                    try
+                    {
+                        var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(state));
+                        var stateObj = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(stateJson);
+                        if (stateObj != null && stateObj.TryGetValue("redirectUrl", out var r)) redirectUrl = r;
+                    }
+                    catch { }
+                }
+
+                if (!string.IsNullOrEmpty(redirectUrl))
+                {
+                    var finalUrl = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(redirectUrl, "error", ex.Message);
+                    return Redirect(finalUrl);
+                }
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [Authorize]
         [HttpPost("add-password")]
         public async Task<IActionResult> AddPassword([FromBody] AddPasswordRequest request)

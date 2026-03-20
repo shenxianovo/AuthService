@@ -28,11 +28,15 @@ builder.Services.AddSingleton<IJwtService, JwtService>();
 // Github OAuth
 builder.Services.Configure<GithubOAuthOptions>(builder.Configuration.GetSection(GithubOAuthOptions.Section));
 
+// Google OAuth
+builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(GoogleOAuthOptions.Section));
+
 // Auth services
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
 builder.Services.AddHttpClient<IGithubAuthService, GithubAuthService>();
+builder.Services.AddHttpClient<IGoogleAuthService, GoogleAuthService>();
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
