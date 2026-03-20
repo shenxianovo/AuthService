@@ -61,15 +61,15 @@ var app = builder.Build();
 // Nginx forwarded headers
 app.UseForwardedHeaders();
 
-// auto migration, disable later
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (db.Database.IsRelational())
-        db.Database.Migrate();
-    else
-        db.Database.EnsureCreated();
-}
+// Apply migrations via CLI: dotnet ef database update
+// using (var scope = app.Services.CreateScope())
+// {
+//     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//     if (db.Database.IsRelational())
+//         db.Database.Migrate();
+//     else
+//         db.Database.EnsureCreated();
+// }
 
 app.UseAuthentication();
 app.UseAuthorization();

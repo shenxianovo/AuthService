@@ -135,6 +135,13 @@ namespace AuthService.Services
         /// </summary>
         private async Task MergeUserAsync(User sourceUser, User targetUser)
         {
+            // Revoke all sessions of source user (invalidates their refresh tokens)
+            var sourceSessions = await db.Sessions
+                .Where(s => s.UserId == sourceUser.Id && !s.Revoked)
+                .ToListAsync();
+            foreach (var s in sourceSessions)
+                s.Revoked = true;
+
             // Move AuthProviders
             var providers = await db.AuthProviders.Where(p => p.UserId == sourceUser.Id).ToListAsync();
             foreach (var p in providers)
