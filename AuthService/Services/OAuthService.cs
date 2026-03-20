@@ -26,7 +26,14 @@ namespace AuthService.Services
                     throw new UnauthorizedAccessException("User is deleted.");
                     
                 if (currentUserId.HasValue && user.Id != currentUserId.Value)
-                    throw new InvalidOperationException("This third-party account is already bound to another user.");
+                {
+                    // Merge: move everything from the OAuth user to the current user
+                    var currentUser = await db.Users.FindAsync(currentUserId.Value)
+                        ?? throw new UnauthorizedAccessException("Current user not found.");
+
+                    await MergeUserAsync(sourceUser: user, targetUser: currentUser);
+                    user = currentUser;
+                }
             }
             else
             {
@@ -45,8 +52,8 @@ namespace AuthService.Services
 
                     if (!string.IsNullOrEmpty(email))
                     {
-                        var emailExists = await db.UserEmails.AnyAsync(e => e.Email == email.ToLowerInvariant());
-                        if (!emailExists)
+                        var existingEmail = await db.UserEmails.FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
+                        if (existingEmail == null)
                         {
                             db.UserEmails.Add(new UserEmail
                             {
@@ -54,6 +61,15 @@ namespace AuthService.Services
                                 Email = email.ToLowerInvariant(),
                                 IsPrimary = !await db.UserEmails.AnyAsync(e => e.UserId == user.Id && e.IsPrimary)
                             });
+                        }
+                        else if (existingEmail.UserId != user.Id)
+                        {
+                            // Email belongs to another user — merge that user into current
+                            var otherUser = await db.Users.FindAsync(existingEmail.UserId);
+                            if (otherUser != null && !otherUser.IsDeleted)
+                            {
+                                await MergeUserAsync(sourceUser: otherUser, targetUser: user);
+                            }
                         }
                     }
                 }
@@ -110,7 +126,53 @@ namespace AuthService.Services
                 }
             }
             
+            await db.SaveChangesAsync();
             return user;
+        }
+
+        /// <summary>
+        /// Merge all data from sourceUser into targetUser, then soft-delete sourceUser.
+        /// </summary>
+        private async Task MergeUserAsync(User sourceUser, User targetUser)
+        {
+            // Move AuthProviders
+            var providers = await db.AuthProviders.Where(p => p.UserId == sourceUser.Id).ToListAsync();
+            foreach (var p in providers)
+                p.UserId = targetUser.Id;
+
+            // Move Emails (skip duplicates)
+            var targetEmails = await db.UserEmails.Where(e => e.UserId == targetUser.Id).Select(e => e.Email).ToListAsync();
+            var sourceEmails = await db.UserEmails.Where(e => e.UserId == sourceUser.Id).ToListAsync();
+            foreach (var e in sourceEmails)
+            {
+                if (targetEmails.Contains(e.Email))
+                    db.UserEmails.Remove(e);
+                else
+                {
+                    e.UserId = targetUser.Id;
+                    e.IsPrimary = false; // target keeps its own primary
+                }
+            }
+
+            // Move Sessions
+            var sessions = await db.Sessions.Where(s => s.UserId == sourceUser.Id).ToListAsync();
+            foreach (var s in sessions)
+                s.UserId = targetUser.Id;
+
+            // Move PasswordCredential (only if target doesn't have one)
+            var sourcePassword = await db.PasswordCredentials.FindAsync(sourceUser.Id);
+            if (sourcePassword != null)
+            {
+                var targetHasPassword = await db.PasswordCredentials.AnyAsync(p => p.UserId == targetUser.Id);
+                if (!targetHasPassword)
+                    sourcePassword.UserId = targetUser.Id;
+                else
+                    db.PasswordCredentials.Remove(sourcePassword);
+            }
+
+            // Soft-delete source user
+            sourceUser.IsDeleted = true;
+            sourceUser.UpdatedAt = DateTimeOffset.UtcNow;
         }
     }
 }

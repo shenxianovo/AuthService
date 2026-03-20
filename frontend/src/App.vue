@@ -4,10 +4,29 @@
     
     <div v-if="authenticated">
       <div class="card success">
-        <h3>Authenticated Successfully!</h3>
+        <h3>{{ userInfo ? userInfo.displayName : 'Authenticated' }}</h3>
         <p><strong>UserId:</strong> {{ authData.userId }}</p>
-        <p><strong>Access Token:</strong></p>
-        <textarea readonly :value="authData.accessToken"></textarea>
+        
+        <div v-if="userInfo">
+          <p><strong>Emails:</strong></p>
+          <ul class="info-list">
+            <li v-for="email in userInfo.emails" :key="email.email">
+              {{ email.email }}
+              <span v-if="email.isPrimary" class="badge primary-badge">Primary</span>
+              <span v-if="email.isVerified" class="badge verified-badge">Verified</span>
+            </li>
+          </ul>
+          
+          <p><strong>Linked Providers:</strong></p>
+          <ul class="info-list" v-if="userInfo.providers.length">
+            <li v-for="p in userInfo.providers" :key="p.provider">
+              {{ p.provider }}
+            </li>
+          </ul>
+          <p v-else class="muted">No third-party providers linked.</p>
+          
+          <p><strong>Password:</strong> {{ userInfo.hasPassword ? 'Set' : 'Not set' }}</p>
+        </div>
       </div>
       
       <div class="card form-container">
@@ -103,6 +122,7 @@ export default {
       successMsg: null,
       authenticated: false,
       authData: null,
+      userInfo: null,
       registerForm: {
         displayName: '',
         email: '',
@@ -163,6 +183,7 @@ export default {
 
         this.authData = data;
         this.authenticated = true;
+        await this.fetchUserInfo();
       } catch (err) {
         this.error = err.message;
       } finally {
@@ -172,6 +193,7 @@ export default {
     logout() {
       this.authenticated = false;
       this.authData = null;
+      this.userInfo = null;
       this.resetMessages();
       // Remove query parameters if any (from github callback)
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -219,10 +241,23 @@ export default {
 
         this.successMsg = 'Password successfully added/updated!';
         this.addPasswordForm.password = '';
+        await this.fetchUserInfo();
       } catch (err) {
         this.error = err.message;
       } finally {
         this.loading = false;
+      }
+    },
+    async fetchUserInfo() {
+      try {
+        const response = await fetch(`${this.apiUrl}/me`, {
+          headers: { 'Authorization': `Bearer ${this.authData.accessToken}` }
+        });
+        if (response.ok) {
+          this.userInfo = await response.json();
+        }
+      } catch {
+        // ignore fetch error
       }
     }
   },
@@ -240,6 +275,7 @@ export default {
       };
       this.authenticated = true;
       this.successMsg = 'OAuth login successful!';
+      await this.fetchUserInfo();
       // Clean up URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (error) {
@@ -365,6 +401,29 @@ h2 {
 }
 
 .card.success p { margin: 5px 0; }
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 5px 0 10px;
+}
+
+.info-list li {
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.primary-badge { background: #007bff; color: white; }
+.verified-badge { background: #28a745; color: white; }
+.muted { color: #888; font-size: 13px; }
 
 textarea {
   width: 100%;
