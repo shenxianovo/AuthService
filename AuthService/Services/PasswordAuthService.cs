@@ -65,7 +65,18 @@ namespace AuthService.Services
                 return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
 
             var user = userEmail.User;
-            var verifyResult = passwordHasher.VerifyHashedPassword(user, credential.PasswordHash, request.Password);
+
+            PasswordVerificationResult verifyResult;
+            try
+            {
+                verifyResult = passwordHasher.VerifyHashedPassword(user, credential.PasswordHash, request.Password);
+            }
+            catch (FormatException)
+            {
+                // Stored hash is malformed (not valid Base64 / Identity v2/v3 format).
+                // Treat as invalid credentials rather than crashing with 500.
+                return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
+            }
 
             if (verifyResult == PasswordVerificationResult.Failed)
                 return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
