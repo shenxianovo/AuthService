@@ -9,6 +9,8 @@ namespace AuthService.DTOs.Auth
         public string Email { get; set; } = null!;
 
         [Required]
+        [MinLength(8)]
+        [MaxLength(128)]
         public string Password { get; set; } = null!;
     }
 }
