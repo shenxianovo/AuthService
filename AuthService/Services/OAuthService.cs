@@ -167,14 +167,26 @@ namespace AuthService.Services
                 s.UserId = targetUser.Id;
 
             // Move PasswordCredential (only if target doesn't have one)
+            // UserId is the PK of PasswordCredential (1:1), so we can't just update it.
+            // We must delete the source and create a new one for the target.
             var sourcePassword = await db.PasswordCredentials.FindAsync(sourceUser.Id);
             if (sourcePassword != null)
             {
                 var targetHasPassword = await db.PasswordCredentials.AnyAsync(p => p.UserId == targetUser.Id);
                 if (!targetHasPassword)
-                    sourcePassword.UserId = targetUser.Id;
-                else
+                {
+                    var newCredential = new PasswordCredential
+                    {
+                        UserId = targetUser.Id,
+                        PasswordHash = sourcePassword.PasswordHash
+                    };
                     db.PasswordCredentials.Remove(sourcePassword);
+                    db.PasswordCredentials.Add(newCredential);
+                }
+                else
+                {
+                    db.PasswordCredentials.Remove(sourcePassword);
+                }
             }
 
             // Soft-delete source user
