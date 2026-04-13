@@ -13,10 +13,10 @@ namespace AuthService.Services
     }
 
     public class GithubAuthService(
-        HttpClient http, 
-        IOptions<GithubOAuthOptions> options, 
+        HttpClient http,
+        IOptions<GithubOAuthOptions> options,
         IOAuthService oauthService,
-        SessionService sessionService) : IGithubAuthService
+        ISessionService sessionService) : IGithubAuthService
     {
         private readonly GithubOAuthOptions _options = options.Value;
 

@@ -15,7 +15,7 @@ namespace AuthService.Services
 
     public class PasswordAuthService(
         AppDbContext db,
-        SessionService sessionService,
+        ISessionService sessionService,
         IPasswordHasher<User> passwordHasher) : IPasswordAuthService
     {
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request, string ipAddress, string device)

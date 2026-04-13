@@ -16,7 +16,7 @@ namespace AuthService.Services
         HttpClient http,
         IOptions<GoogleOAuthOptions> options,
         IOAuthService oauthService,
-        SessionService sessionService) : IGoogleAuthService
+        ISessionService sessionService) : IGoogleAuthService
     {
         private readonly GoogleOAuthOptions _options = options.Value;
 

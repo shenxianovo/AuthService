@@ -7,7 +7,12 @@ using System.Security.Cryptography;
 
 namespace AuthService.Services
 {
-    public class SessionService(AppDbContext db, IJwtService jwtService, IOptions<JwtOptions> jwtOptions)
+    public interface ISessionService
+    {
+        Task<AuthResponse> CreateSessionAsync(Guid userId, string ipAddress, string device);
+    }
+
+    public class SessionService(AppDbContext db, IJwtService jwtService, IOptions<JwtOptions> jwtOptions) : ISessionService
     {
         private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
