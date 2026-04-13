@@ -32,11 +32,12 @@ namespace AuthService.Controllers
             if (!redirectValidation.IsSuccess)
                 return this.ToErrorResponse(redirectValidation.Error, redirectValidation.ErrorMessage);
 
-            // Parse binding userId from JWT (if provided)
+            // Parse binding userId from JWT query param (if provided)
             Guid? userId = null;
             if (!string.IsNullOrEmpty(token))
             {
-                userId = GetUserIdFromAuthHeader();
+                var jwtSvc = HttpContext.RequestServices.GetRequiredService<IJwtService>();
+                userId = jwtSvc.ValidateTokenAndGetUserId(token);
             }
 
             // Generate signed state (tamper-proof, with CSRF nonce and expiry)
@@ -71,7 +72,8 @@ namespace AuthService.Controllers
             Guid? userId = null;
             if (!string.IsNullOrEmpty(token))
             {
-                userId = GetUserIdFromAuthHeader();
+                var jwtSvc = HttpContext.RequestServices.GetRequiredService<IJwtService>();
+                userId = jwtSvc.ValidateTokenAndGetUserId(token);
             }
 
             var state = oauthSecurity.GenerateState(redirectUrl, userId);
