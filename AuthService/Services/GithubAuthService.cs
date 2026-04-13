@@ -1,7 +1,7 @@
+using AuthService.Configuration;
 using AuthService.DTOs.Auth;
 using AuthService.DTOs.Auth.Github;
 using AuthService.Entities;
-using AuthService.Configuration;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 
@@ -16,26 +16,14 @@ namespace AuthService.Services
         HttpClient http,
         IOptions<GithubOAuthOptions> options,
         IOAuthService oauthService,
-        ISessionService sessionService) : IGithubAuthService
+        ISessionService sessionService)
+        : OAuthProviderServiceBase(http, oauthService, sessionService), IGithubAuthService
     {
         private readonly GithubOAuthOptions _options = options.Value;
 
-        public async Task<AuthResponse> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null)
-        {
-            var token = await ExchangeCode(code);
-            var githubUser = await GetGithubUser(token);
+        protected override AuthProviderType ProviderType => AuthProviderType.Github;
 
-            var user = await oauthService.ProcessOAuthLoginAsync(
-                AuthProviderType.Github,
-                githubUser.Id.ToString(),
-                githubUser.Email,
-                githubUser.Login,
-                currentUserId);
-
-            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
-        }
-
-        private async Task<string> ExchangeCode(string code)
+        protected override async Task<string> ExchangeCodeAsync(string code)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, "https://github.com/login/oauth/access_token")
             {
@@ -47,35 +35,32 @@ namespace AuthService.Services
                     ["redirect_uri"] = _options.CallbackUrl
                 })
             };
-
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            var response = await http.SendAsync(request);
-            
+            var response = await Http.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             var jsonContent = await response.Content.ReadAsStringAsync();
             var result = System.Text.Json.JsonSerializer.Deserialize<GithubTokenResponse>(jsonContent);
 
             if (result == null || string.IsNullOrEmpty(result.AccessToken))
-            {
                 throw new InvalidOperationException($"Failed to exchange GitHub code. GitHub response: {jsonContent}");
-            }
 
             return result.AccessToken;
         }
 
-        private async Task<GithubUser> GetGithubUser(string accessToken)
+        protected override async Task<OAuthUserInfo> GetUserInfoAsync(string accessToken)
         {
-            http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", accessToken);
+            SetBearerToken(accessToken);
+            Http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AuthService", "1.0"));
 
-            http.DefaultRequestHeaders.UserAgent.Add(
-                new ProductInfoHeaderValue("AuthService", "1.0"));
+            var user = await Http.GetFromJsonAsync<GithubUser>("https://api.github.com/user");
 
-            var user = await http.GetFromJsonAsync<GithubUser>("https://api.github.com/user");
-
-            return user!;
+            return new OAuthUserInfo(
+                ProviderUserId: user!.Id.ToString(),
+                Email: user.Email,
+                DisplayName: user.Login
+            );
         }
     }
 }
