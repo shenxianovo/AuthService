@@ -12,6 +12,7 @@ namespace AuthService.Services
         string GenerateAccessToken(Guid userId, Guid sessionId);
         RsaSecurityKey GetPublicKey();
         Guid? ValidateTokenAndGetUserId(string token);
+        Guid? GetSessionIdFromToken(string token);
     }
 
     public class JwtService : IJwtService
@@ -64,6 +65,22 @@ namespace AuthService.Services
 
         public Guid? ValidateTokenAndGetUserId(string token)
         {
+            var principal = ValidateToken(token);
+            if (principal == null) return null;
+            var userIdStr = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return Guid.TryParse(userIdStr, out var userId) ? userId : null;
+        }
+
+        public Guid? GetSessionIdFromToken(string token)
+        {
+            var principal = ValidateToken(token);
+            if (principal == null) return null;
+            var sidStr = principal.FindFirst("sid")?.Value;
+            return Guid.TryParse(sidStr, out var sessionId) ? sessionId : null;
+        }
+
+        private ClaimsPrincipal? ValidateToken(string token)
+        {
             var handler = new JwtSecurityTokenHandler();
             var validationParameters = new TokenValidationParameters
             {
@@ -78,13 +95,7 @@ namespace AuthService.Services
 
             try
             {
-                var principal = handler.ValidateToken(token, validationParameters, out var validatedToken);
-                var userIdStr = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (Guid.TryParse(userIdStr, out var userId))
-                {
-                    return userId;
-                }
-                return null;
+                return handler.ValidateToken(token, validationParameters, out _);
             }
             catch
             {

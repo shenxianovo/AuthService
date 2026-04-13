@@ -2,6 +2,7 @@ using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
 using AuthService.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
@@ -10,6 +11,8 @@ namespace AuthService.Services
     public interface ISessionService
     {
         Task<AuthResponse> CreateSessionAsync(Guid userId, string ipAddress, string device);
+        Task<AuthResponse> RefreshSessionAsync(string refreshToken);
+        Task RevokeSessionAsync(Guid sessionId);
     }
 
     public class SessionService(AppDbContext db, IJwtService jwtService, IOptions<JwtOptions> jwtOptions) : ISessionService
@@ -53,6 +56,68 @@ namespace AuthService.Services
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
             };
         }
+
+        public async Task<AuthResponse> RefreshSessionAsync(string rawRefreshToken)
+        {
+            var tokenHash = HashToken(rawRefreshToken);
+
+            var existing = await db.RefreshTokens
+                .Include(rt => rt.Session)
+                    .ThenInclude(s => s.User)
+                .FirstOrDefaultAsync(rt => rt.TokenHash == tokenHash);
+
+            if (existing == null
+                || existing.Revoked
+                || existing.ExpiresAt <= DateTimeOffset.UtcNow
+                || existing.Session.Revoked
+                || existing.Session.ExpiresAt <= DateTimeOffset.UtcNow
+                || existing.Session.User.IsDeleted)
+            {
+                throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+            }
+
+            // Rotate: revoke the old token and issue a new one
+            existing.Revoked = true;
+
+            var newRawToken = GenerateRefreshToken();
+            var newRefreshToken = new RefreshToken
+            {
+                SessionId = existing.SessionId,
+                TokenHash = HashToken(newRawToken),
+                ExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.RefreshTokenExpirationDays),
+            };
+            db.RefreshTokens.Add(newRefreshToken);
+
+            await db.SaveChangesAsync();
+
+            var session = existing.Session;
+            var accessToken = jwtService.GenerateAccessToken(session.UserId, session.Id);
+
+            return new AuthResponse
+            {
+                UserId = session.UserId,
+                AccessToken = accessToken,
+                RefreshToken = newRawToken,
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
+            };
+        }
+
+        public async Task RevokeSessionAsync(Guid sessionId)
+        {
+            var session = await db.Sessions
+                .Include(s => s.RefreshTokens)
+                .FirstOrDefaultAsync(s => s.Id == sessionId);
+
+            if (session == null || session.Revoked)
+                return;
+
+            session.Revoked = true;
+            foreach (var rt in session.RefreshTokens.Where(rt => !rt.Revoked))
+                rt.Revoked = true;
+
+            await db.SaveChangesAsync();
+        }
+
         private static string GenerateRefreshToken()
         {
             return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
