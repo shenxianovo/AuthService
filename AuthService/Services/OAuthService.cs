@@ -40,7 +40,7 @@ namespace AuthService.Services
             {
                 if (currentUserId.HasValue)
                 {
-                    user = await db.Users.FindAsync(currentUserId.Value);
+                    user = await db.Users.FindAsync(currentUserId.Value) ?? null!;
                     if (user == null)
                         return Result<User>.Fail(AuthError.UserNotFoundForMerge);
 

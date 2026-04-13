@@ -47,6 +47,8 @@ namespace AuthService.Services
                 UserId = user.Id,
             });
 
+            await db.SaveChangesAsync();
+
             return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }
 
