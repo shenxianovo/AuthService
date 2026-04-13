@@ -1,3 +1,4 @@
+using AuthService.Common;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
 using System.Net.Http.Headers;
@@ -37,7 +38,7 @@ namespace AuthService.Services
         /// <summary>
         /// Full login flow: exchange code, get user info, upsert user, create session.
         /// </summary>
-        public async Task<AuthResponse> LoginAsync(
+        public async Task<Result<AuthResponse>> LoginAsync(
             string code,
             string ipAddress,
             string device,
@@ -46,14 +47,18 @@ namespace AuthService.Services
             var accessToken = await ExchangeCodeAsync(code);
             var userInfo = await GetUserInfoAsync(accessToken);
 
-            var user = await oauthService.ProcessOAuthLoginAsync(
+            var userResult = await oauthService.ProcessOAuthLoginAsync(
                 ProviderType,
                 userInfo.ProviderUserId,
                 userInfo.Email,
                 userInfo.DisplayName,
                 currentUserId);
 
-            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            if (!userResult.IsSuccess)
+                return Result<AuthResponse>.Fail(userResult.Error, userResult.ErrorMessage);
+
+            var session = await sessionService.CreateSessionAsync(userResult.Value.Id, ipAddress, device);
+            return Result<AuthResponse>.Ok(session);
         }
 
         /// <summary>

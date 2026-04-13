@@ -1,7 +1,7 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
-using AuthService.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,9 +9,9 @@ namespace AuthService.Services
 {
     public interface IPasswordAuthService
     {
-        Task<AuthResponse> RegisterAsync(RegisterRequest request, string ipAddress, string device);
-        Task<AuthResponse> LoginAsync(LoginRequest request, string ipAddress, string device);
-        Task AddPasswordAsync(Guid userId, string password);
+        Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, string ipAddress, string device);
+        Task<Result<AuthResponse>> LoginAsync(LoginRequest request, string ipAddress, string device);
+        Task<Result> AddPasswordAsync(Guid userId, string password);
     }
 
     public class PasswordAuthService(
@@ -19,48 +19,39 @@ namespace AuthService.Services
         ISessionService sessionService,
         IPasswordHasher<User> passwordHasher) : IPasswordAuthService
     {
-        public async Task<AuthResponse> RegisterAsync(RegisterRequest request, string ipAddress, string device)
+        public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, string ipAddress, string device)
         {
-            // Check if email already exists
             var emailExists = await db.UserEmails
                 .AnyAsync(e => e.Email == request.Email.ToLowerInvariant());
             if (emailExists)
-                throw new ConflictException("Email already registered.");
+                return Result<AuthResponse>.Fail(AuthError.EmailAlreadyExists);
 
-            var user = new User
-            {
-                DisplayName = request.DisplayName,
-            };
+            var user = new User { DisplayName = request.DisplayName };
 
-            var userEmail = new UserEmail
+            db.Users.Add(user);
+            db.UserEmails.Add(new UserEmail
             {
                 Email = request.Email.ToLowerInvariant(),
                 IsPrimary = true,
                 UserId = user.Id,
-            };
-
-            var passwordCredential = new PasswordCredential
+            });
+            db.PasswordCredentials.Add(new PasswordCredential
             {
                 UserId = user.Id,
                 PasswordHash = passwordHasher.HashPassword(user, request.Password),
-            };
-
-            var authProvider = new AuthProvider
+            });
+            db.AuthProviders.Add(new AuthProvider
             {
                 Provider = AuthProviderType.Password,
                 ProviderUserId = user.Id.ToString(),
                 UserId = user.Id,
-            };
+            });
 
-            db.Users.Add(user);
-            db.UserEmails.Add(userEmail);
-            db.PasswordCredentials.Add(passwordCredential);
-            db.AuthProviders.Add(authProvider);
-
-            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            var session = await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            return Result<AuthResponse>.Ok(session);
         }
 
-        public async Task<AuthResponse> LoginAsync(LoginRequest request, string ipAddress, string device)
+        public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, string ipAddress, string device)
         {
             var userEmail = await db.UserEmails
                 .Include(e => e.User)
@@ -68,56 +59,51 @@ namespace AuthService.Services
                 .FirstOrDefaultAsync(e => e.Email == request.Email.ToLowerInvariant());
 
             if (userEmail is null || userEmail.User.IsDeleted)
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
 
             var credential = userEmail.User.PasswordCredential;
             if (credential is null)
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
 
             var user = userEmail.User;
             var verifyResult = passwordHasher.VerifyHashedPassword(user, credential.PasswordHash, request.Password);
 
             if (verifyResult == PasswordVerificationResult.Failed)
-                throw new UnauthorizedAccessException("Invalid email or password.");
+                return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
 
-            // Auto-rehash if the hasher indicates the hash needs upgrading
             if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
-            {
                 credential.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-            }
 
-            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            var session = await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            return Result<AuthResponse>.Ok(session);
         }
 
-        public async Task AddPasswordAsync(Guid userId, string password)
+        public async Task<Result> AddPasswordAsync(Guid userId, string password)
         {
             var user = await db.Users
                 .Include(u => u.PasswordCredential)
                 .FirstOrDefaultAsync(u => u.Id == userId);
-                
+
             if (user is null)
-                throw new BusinessException("User not found.");
+                return Result.Fail(AuthError.UserNotFound);
 
             if (user.PasswordCredential is not null)
-                throw new BusinessException("User already has a password.");
-                
-            var credential = new PasswordCredential
+                return Result.Fail(AuthError.PasswordAlreadySet);
+
+            db.PasswordCredentials.Add(new PasswordCredential
             {
                 UserId = userId,
                 PasswordHash = passwordHasher.HashPassword(user, password)
-            };
-            
-            db.PasswordCredentials.Add(credential);
-            
-            var authProvider = new AuthProvider
+            });
+            db.AuthProviders.Add(new AuthProvider
             {
                 Provider = AuthProviderType.Password,
                 ProviderUserId = userId.ToString(),
                 UserId = userId
-            };
-            db.AuthProviders.Add(authProvider);
-            
+            });
+
             await db.SaveChangesAsync();
+            return Result.Ok();
         }
     }
 }

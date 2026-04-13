@@ -1,8 +1,8 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
 using AuthService.Configuration;
-using AuthService.Exceptions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +39,6 @@ namespace AuthService.Tests.Unit.Services
 
             var sessionService = new SessionService(_db, _jwtServiceMock.Object, _jwtOptions);
             var passwordHasher = new PasswordHasher<User>();
-
             _sut = new PasswordAuthService(_db, sessionService, passwordHasher);
         }
 
@@ -59,12 +58,11 @@ namespace AuthService.Tests.Unit.Services
 
             var result = await _sut.RegisterAsync(request, "127.0.0.1", "TestAgent");
 
-            Assert.NotNull(result);
-            Assert.Equal("fake-access-token", result.AccessToken);
-            Assert.NotEmpty(result.RefreshToken);
-            Assert.NotEqual(Guid.Empty, result.UserId);
+            Assert.True(result.IsSuccess);
+            Assert.Equal("fake-access-token", result.Value.AccessToken);
+            Assert.NotEmpty(result.Value.RefreshToken);
+            Assert.NotEqual(Guid.Empty, result.Value.UserId);
 
-            // Verify database records
             var user = await _db.Users.FirstOrDefaultAsync();
             Assert.NotNull(user);
             Assert.Equal("Test User", user.DisplayName);
@@ -77,7 +75,7 @@ namespace AuthService.Tests.Unit.Services
             var credential = await _db.PasswordCredentials.FirstOrDefaultAsync();
             Assert.NotNull(credential);
             Assert.NotEmpty(credential.PasswordHash);
-            Assert.NotEqual("SecurePass123", credential.PasswordHash); // should be hashed, not plaintext
+            Assert.NotEqual("SecurePass123", credential.PasswordHash);
 
             var provider = await _db.AuthProviders.FirstOrDefaultAsync();
             Assert.NotNull(provider);
@@ -111,7 +109,7 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task Register_WithDuplicateEmail_ThrowsInvalidOperation()
+        public async Task Register_WithDuplicateEmail_ReturnsConflictError()
         {
             var request = new RegisterRequest
             {
@@ -121,9 +119,10 @@ namespace AuthService.Tests.Unit.Services
             };
 
             await _sut.RegisterAsync(request, "127.0.0.1", "TestAgent");
+            var result = await _sut.RegisterAsync(request, "127.0.0.1", "TestAgent");
 
-            await Assert.ThrowsAsync<ConflictException>(
-                () => _sut.RegisterAsync(request, "127.0.0.1", "TestAgent"));
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.EmailAlreadyExists, result.Error);
         }
 
         // --- Login ---
@@ -131,7 +130,6 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public async Task Login_WithValidCredentials_ReturnsTokens()
         {
-            // Arrange: register first
             var registerRequest = new RegisterRequest
             {
                 DisplayName = "Test",
@@ -140,7 +138,6 @@ namespace AuthService.Tests.Unit.Services
             };
             await _sut.RegisterAsync(registerRequest, "127.0.0.1", "TestAgent");
 
-            // Act: login
             var loginRequest = new LoginRequest
             {
                 Email = "test@example.com",
@@ -148,17 +145,16 @@ namespace AuthService.Tests.Unit.Services
             };
             var result = await _sut.LoginAsync(loginRequest, "192.168.1.1", "AnotherAgent");
 
-            Assert.NotNull(result);
-            Assert.Equal("fake-access-token", result.AccessToken);
-            Assert.NotEmpty(result.RefreshToken);
+            Assert.True(result.IsSuccess);
+            Assert.Equal("fake-access-token", result.Value.AccessToken);
+            Assert.NotEmpty(result.Value.RefreshToken);
 
-            // Should have 2 sessions now
             var sessions = await _db.Sessions.CountAsync();
             Assert.Equal(2, sessions);
         }
 
         [Fact]
-        public async Task Login_WithWrongPassword_ThrowsUnauthorized()
+        public async Task Login_WithWrongPassword_ReturnsInvalidCredentials()
         {
             var registerRequest = new RegisterRequest
             {
@@ -173,26 +169,28 @@ namespace AuthService.Tests.Unit.Services
                 Email = "test@example.com",
                 Password = "WrongPassword",
             };
+            var result = await _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent");
 
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent"));
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidCredentials, result.Error);
         }
 
         [Fact]
-        public async Task Login_WithNonExistentEmail_ThrowsUnauthorized()
+        public async Task Login_WithNonExistentEmail_ReturnsInvalidCredentials()
         {
             var loginRequest = new LoginRequest
             {
                 Email = "nobody@example.com",
                 Password = "Whatever123",
             };
+            var result = await _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent");
 
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent"));
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidCredentials, result.Error);
         }
 
         [Fact]
-        public async Task Login_WithDeletedUser_ThrowsUnauthorized()
+        public async Task Login_WithDeletedUser_ReturnsInvalidCredentials()
         {
             var registerRequest = new RegisterRequest
             {
@@ -202,8 +200,7 @@ namespace AuthService.Tests.Unit.Services
             };
             var registerResult = await _sut.RegisterAsync(registerRequest, "127.0.0.1", "TestAgent");
 
-            // Soft delete the user
-            var user = await _db.Users.FindAsync(registerResult.UserId);
+            var user = await _db.Users.FindAsync(registerResult.Value.UserId);
             user!.IsDeleted = true;
             await _db.SaveChangesAsync();
 
@@ -212,9 +209,10 @@ namespace AuthService.Tests.Unit.Services
                 Email = "test@example.com",
                 Password = "SecurePass123",
             };
+            var result = await _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent");
 
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent"));
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidCredentials, result.Error);
         }
 
         [Fact]
@@ -235,8 +233,8 @@ namespace AuthService.Tests.Unit.Services
             };
             var result = await _sut.LoginAsync(loginRequest, "127.0.0.1", "TestAgent");
 
-            Assert.NotNull(result);
-            Assert.NotEmpty(result.AccessToken);
+            Assert.True(result.IsSuccess);
+            Assert.NotEmpty(result.Value.AccessToken);
         }
     }
 }

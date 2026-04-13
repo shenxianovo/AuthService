@@ -1,4 +1,5 @@
 using AuthService.DTOs.Auth;
+using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,8 +14,8 @@ namespace AuthService.Controllers
         {
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var device = Request.Headers.UserAgent.ToString();
-            var response = await passwordAuthService.RegisterAsync(request, ipAddress, device);
-            return Ok(response);
+            var result = await passwordAuthService.RegisterAsync(request, ipAddress, device);
+            return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
         }
 
         [HttpPost("login")]
@@ -22,8 +23,8 @@ namespace AuthService.Controllers
         {
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var device = Request.Headers.UserAgent.ToString();
-            var response = await passwordAuthService.LoginAsync(request, ipAddress, device);
-            return Ok(response);
+            var result = await passwordAuthService.LoginAsync(request, ipAddress, device);
+            return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
         }
     }
 }

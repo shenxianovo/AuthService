@@ -1,3 +1,4 @@
+using AuthService.Common;
 using AuthService.Configuration;
 using AuthService.DTOs.Auth;
 using AuthService.DTOs.Auth.Google;
@@ -8,7 +9,7 @@ namespace AuthService.Services
 {
     public interface IGoogleAuthService
     {
-        Task<AuthResponse> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null);
+        Task<Result<AuthResponse>> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null);
     }
 
     public class GoogleAuthService(

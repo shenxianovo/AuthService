@@ -1,4 +1,5 @@
 using AuthService.DTOs.Auth;
+using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,8 +19,8 @@ namespace AuthService.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
         {
-            var response = await sessionService.RefreshSessionAsync(request.RefreshToken);
-            return Ok(response);
+            var result = await sessionService.RefreshSessionAsync(request.RefreshToken);
+            return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
         }
 
         /// <summary>

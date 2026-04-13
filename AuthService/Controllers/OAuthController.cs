@@ -1,5 +1,7 @@
-using AuthService.DTOs.Auth;
+using AuthService.Common;
 using AuthService.Configuration;
+using AuthService.DTOs.Auth;
+using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
@@ -95,7 +97,7 @@ namespace AuthService.Controllers
         /// </summary>
         private async Task<IActionResult> HandleOAuthCallback(
             string? state,
-            Func<string, string, Guid?, Task<AuthResponse>> loginAction)
+            Func<string, string, Guid?, Task<Result<AuthResponse>>> loginAction)
         {
             // Validate signed state
             OAuthStatePayload? statePayload = null;
@@ -103,40 +105,39 @@ namespace AuthService.Controllers
             {
                 statePayload = oauthSecurity.ValidateState(state);
                 if (statePayload == null)
-                    return BadRequest(new { message = "Invalid or expired OAuth state." });
+                    return this.ToErrorResponse(AuthError.InvalidOAuthState);
             }
 
             string? redirectUrl = statePayload?.RedirectUrl;
             Guid? currentUserId = statePayload?.UserId;
 
-            try
-            {
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                var device = Request.Headers.UserAgent.ToString();
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var device = Request.Headers.UserAgent.ToString();
 
-                var response = await loginAction(ipAddress, device, currentUserId);
+            var result = await loginAction(ipAddress, device, currentUserId);
 
-                if (!string.IsNullOrEmpty(redirectUrl))
-                {
-                    // Generate one-time auth code instead of passing tokens in URL
-                    var authCode = oauthSecurity.GenerateAuthCode(
-                        response.UserId, response.AccessToken, response.RefreshToken, response.ExpiresAt);
-
-                    var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "code", authCode);
-                    return Redirect(finalUrl);
-                }
-
-                return Ok(response);
-            }
-            catch (InvalidOperationException ex)
+            if (!result.IsSuccess)
             {
                 if (!string.IsNullOrEmpty(redirectUrl))
                 {
-                    var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "error", ex.Message);
+                    var errorMsg = result.ErrorMessage ?? result.Error.ToString();
+                    var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "error", errorMsg);
                     return Redirect(finalUrl);
                 }
-                return BadRequest(new { message = ex.Message });
+                return this.ToErrorResponse(result.Error, result.ErrorMessage);
             }
+
+            if (!string.IsNullOrEmpty(redirectUrl))
+            {
+                var authCode = oauthSecurity.GenerateAuthCode(
+                    result.Value.UserId, result.Value.AccessToken,
+                    result.Value.RefreshToken, result.Value.ExpiresAt);
+
+                var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "code", authCode);
+                return Redirect(finalUrl);
+            }
+
+            return Ok(result.Value);
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AuthService.DTOs.Auth;
+using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,8 +21,8 @@ namespace AuthService.Controllers
             if (!Guid.TryParse(userIdClaim, out var userId))
                 return Unauthorized();
 
-            await passwordAuthService.AddPasswordAsync(userId, request.Password);
-            return Ok(new { message = "Password added successfully." });
+            var result = await passwordAuthService.AddPasswordAsync(userId, request.Password);
+            return result.IsSuccess ? Ok(new { message = "Password added successfully." }) : this.ToErrorResponse(result.Error);
         }
 
         [Authorize]

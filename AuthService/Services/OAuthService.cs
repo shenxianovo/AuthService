@@ -1,18 +1,18 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.Entities;
-using AuthService.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Services
 {
     public interface IOAuthService
     {
-        Task<User> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null);
+        Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null);
     }
 
     public class OAuthService(AppDbContext db) : IOAuthService
     {
-        public async Task<User> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null)
+        public async Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null)
         {
             var authProvider = await db.AuthProviders
                 .Include(a => a.User)
@@ -24,13 +24,13 @@ namespace AuthService.Services
             {
                 user = authProvider.User;
                 if (user.IsDeleted)
-                    throw new UnauthorizedAccessException("User is deleted.");
-                    
+                    return Result<User>.Fail(AuthError.UserDeleted);
+
                 if (currentUserId.HasValue && user.Id != currentUserId.Value)
                 {
-                    // Merge: move everything from the OAuth user to the current user
-                    var currentUser = await db.Users.FindAsync(currentUserId.Value)
-                        ?? throw new UnauthorizedAccessException("Current user not found.");
+                    var currentUser = await db.Users.FindAsync(currentUserId.Value);
+                    if (currentUser == null)
+                        return Result<User>.Fail(AuthError.UserNotFoundForMerge);
 
                     await MergeUserAsync(sourceUser: user, targetUser: currentUser);
                     user = currentUser;
@@ -40,16 +40,16 @@ namespace AuthService.Services
             {
                 if (currentUserId.HasValue)
                 {
-                    user = await db.Users.FindAsync(currentUserId.Value) 
-                        ?? throw new UnauthorizedAccessException("Current user not found.");
-                        
-                    authProvider = new AuthProvider
+                    user = await db.Users.FindAsync(currentUserId.Value);
+                    if (user == null)
+                        return Result<User>.Fail(AuthError.UserNotFoundForMerge);
+
+                    db.AuthProviders.Add(new AuthProvider
                     {
                         UserId = user.Id,
                         Provider = provider,
                         ProviderUserId = providerUserId
-                    };
-                    db.AuthProviders.Add(authProvider);
+                    });
 
                     if (!string.IsNullOrEmpty(email))
                     {
@@ -65,12 +65,9 @@ namespace AuthService.Services
                         }
                         else if (existingEmail.UserId != user.Id)
                         {
-                            // Email belongs to another user — merge that user into current
                             var otherUser = await db.Users.FindAsync(existingEmail.UserId);
                             if (otherUser != null && !otherUser.IsDeleted)
-                            {
                                 await MergeUserAsync(sourceUser: otherUser, targetUser: user);
-                            }
                         }
                     }
                 }
@@ -88,22 +85,18 @@ namespace AuthService.Services
                     {
                         user = userEmail.User;
                         if (user.IsDeleted)
-                            throw new UnauthorizedAccessException("User is deleted.");
-                        
-                        authProvider = new AuthProvider
+                            return Result<User>.Fail(AuthError.UserDeleted);
+
+                        db.AuthProviders.Add(new AuthProvider
                         {
                             UserId = user.Id,
                             Provider = provider,
                             ProviderUserId = providerUserId
-                        };
-                        db.AuthProviders.Add(authProvider);
+                        });
                     }
                     else
                     {
-                        user = new User
-                        {
-                            DisplayName = displayName,
-                        };
+                        user = new User { DisplayName = displayName };
                         db.Users.Add(user);
 
                         if (!string.IsNullOrEmpty(email))
@@ -116,19 +109,18 @@ namespace AuthService.Services
                             });
                         }
 
-                        authProvider = new AuthProvider
+                        db.AuthProviders.Add(new AuthProvider
                         {
                             UserId = user.Id,
                             Provider = provider,
                             ProviderUserId = providerUserId
-                        };
-                        db.AuthProviders.Add(authProvider);
+                        });
                     }
                 }
             }
-            
+
             await db.SaveChangesAsync();
-            return user;
+            return Result<User>.Ok(user);
         }
 
         /// <summary>

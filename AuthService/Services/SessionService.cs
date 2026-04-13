@@ -1,3 +1,4 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
@@ -11,7 +12,7 @@ namespace AuthService.Services
     public interface ISessionService
     {
         Task<AuthResponse> CreateSessionAsync(Guid userId, string ipAddress, string device);
-        Task<AuthResponse> RefreshSessionAsync(string refreshToken);
+        Task<Result<AuthResponse>> RefreshSessionAsync(string refreshToken);
         Task RevokeSessionAsync(Guid sessionId);
     }
 
@@ -57,7 +58,7 @@ namespace AuthService.Services
             };
         }
 
-        public async Task<AuthResponse> RefreshSessionAsync(string rawRefreshToken)
+        public async Task<Result<AuthResponse>> RefreshSessionAsync(string rawRefreshToken)
         {
             var tokenHash = HashToken(rawRefreshToken);
 
@@ -73,7 +74,7 @@ namespace AuthService.Services
                 || existing.Session.ExpiresAt <= DateTimeOffset.UtcNow
                 || existing.Session.User.IsDeleted)
             {
-                throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+                return Result<AuthResponse>.Fail(AuthError.InvalidRefreshToken);
             }
 
             // Rotate: revoke the old token and issue a new one
@@ -93,13 +94,13 @@ namespace AuthService.Services
             var session = existing.Session;
             var accessToken = jwtService.GenerateAccessToken(session.UserId, session.Id);
 
-            return new AuthResponse
+            return Result<AuthResponse>.Ok(new AuthResponse
             {
                 UserId = session.UserId,
                 AccessToken = accessToken,
                 RefreshToken = newRawToken,
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
-            };
+            });
         }
 
         public async Task RevokeSessionAsync(Guid sessionId)
