@@ -1,24 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using AuthService.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AuthService.Services
 {
-    public class JwtOptions
-    {
-        public const string Section = "Jwt";
-
-        public string PrivateKeyPath { get; set; } = null!;
-        public string PublicKeyPath { get; set; } = null!;
-        public string Issuer { get; set; } = null!;
-        public string Audience { get; set; } = null!;
-        public int AccessTokenExpirationMinutes { get; set; } = 15;
-        public int RefreshTokenExpirationDays { get; set; } = 30;
-        public int SessionExpirationDays { get; set; } = 30;
-    }
-
     public interface IJwtService
     {
         string GenerateAccessToken(Guid userId, Guid sessionId);

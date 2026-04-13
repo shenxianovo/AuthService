@@ -1,20 +1,12 @@
 using AuthService.DTOs.Auth;
 using AuthService.DTOs.Auth.Google;
 using AuthService.Entities;
+using AuthService.Configuration;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 
 namespace AuthService.Services
 {
-    public class GoogleOAuthOptions
-    {
-        public const string Section = "GoogleOAuth";
-
-        public string ClientId { get; set; } = null!;
-        public string ClientSecret { get; set; } = null!;
-        public string CallbackUrl { get; set; } = null!;
-    }
-
     public interface IGoogleAuthService
     {
         Task<AuthResponse> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null);

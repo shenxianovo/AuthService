@@ -1,5 +1,6 @@
 using AuthService.Data;
 using AuthService.Entities;
+using AuthService.Configuration;
 using AuthService.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

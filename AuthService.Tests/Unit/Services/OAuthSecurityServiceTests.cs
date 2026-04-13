@@ -1,3 +1,4 @@
+using AuthService.Configuration;
 using AuthService.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;

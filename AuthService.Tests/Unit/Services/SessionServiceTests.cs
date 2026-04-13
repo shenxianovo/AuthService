@@ -1,4 +1,5 @@
 using AuthService.Data;
+using AuthService.Configuration;
 using AuthService.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

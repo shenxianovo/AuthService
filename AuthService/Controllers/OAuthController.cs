@@ -1,63 +1,23 @@
-﻿using System.Security.Claims;
-using AuthService.Data;
 using AuthService.DTOs.Auth;
-using AuthService.Entities;
+using AuthService.Configuration;
 using AuthService.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AuthService.Controllers
 {
     [ApiController]
     [Route("api/v1/auth")]
-    public class AuthController(
-        IPasswordAuthService passwordAuthService,
+    public class OAuthController(
         IGithubAuthService githubAuthService,
         IGoogleAuthService googleAuthService,
         IOAuthSecurityService oauthSecurity,
         IOptions<GithubOAuthOptions> githubOptions,
-        IOptions<GoogleOAuthOptions> googleOptions,
-        AppDbContext db) : ControllerBase
+        IOptions<GoogleOAuthOptions> googleOptions) : ControllerBase
     {
         private readonly GithubOAuthOptions _githubOptions = githubOptions.Value;
         private readonly GoogleOAuthOptions _googleOptions = googleOptions.Value;
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-        {
-            try
-            {
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                var device = Request.Headers.UserAgent.ToString();
-
-                var response = await passwordAuthService.RegisterAsync(request, ipAddress, device);
-                return Ok(response);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-        }
-
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            try
-            {
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                var device = Request.Headers.UserAgent.ToString();
-
-                var response = await passwordAuthService.LoginAsync(request, ipAddress, device);
-                return Ok(response);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Unauthorized(new { message = "Invalid email or password." });
-            }
-        }
 
         // ===================== GitHub OAuth =====================
 
@@ -71,8 +31,7 @@ namespace AuthService.Controllers
             Guid? userId = null;
             if (!string.IsNullOrEmpty(token))
             {
-                var userIdClaim = GetUserIdFromAuthHeader();
-                userId = userIdClaim;
+                userId = GetUserIdFromAuthHeader();
             }
 
             // Generate signed state (tamper-proof, with CSRF nonce and expiry)
@@ -126,88 +85,6 @@ namespace AuthService.Controllers
             return await HandleOAuthCallback(
                 state,
                 (ipAddress, device, currentUserId) => googleAuthService.LoginAsync(code, ipAddress, device, currentUserId));
-        }
-
-        // ===================== Auth Code Exchange =====================
-
-        /// <summary>
-        /// Exchange a one-time authorization code for tokens (POST, no tokens in URL).
-        /// </summary>
-        [HttpPost("exchange")]
-        public IActionResult ExchangeCode([FromBody] ExchangeCodeRequest request)
-        {
-            var payload = oauthSecurity.ExchangeAuthCode(request.Code);
-            if (payload == null)
-                return BadRequest(new { message = "Invalid or expired authorization code." });
-
-            return Ok(new AuthResponse
-            {
-                UserId = payload.UserId,
-                AccessToken = payload.AccessToken,
-                RefreshToken = payload.RefreshToken,
-                ExpiresAt = payload.ExpiresAt
-            });
-        }
-
-        // ===================== Account Management =====================
-
-        [Authorize]
-        [HttpPost("add-password")]
-        public async Task<IActionResult> AddPassword([FromBody] AddPasswordRequest request)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!Guid.TryParse(userIdClaim, out var userId))
-                    return Unauthorized();
-
-                await passwordAuthService.AddPasswordAsync(userId, request.Password);
-                return Ok(new { message = "Password added successfully." });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [Authorize]
-        [HttpGet("me")]
-        public async Task<IActionResult> GetMe()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
-                return Unauthorized();
-
-            var user = await db.Users
-                .Include(u => u.Emails)
-                .Include(u => u.Providers)
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
-
-            if (user == null)
-                return NotFound();
-
-            var hasPassword = await db.PasswordCredentials.AnyAsync(p => p.UserId == userId);
-
-            return Ok(new UserInfoResponse
-            {
-                UserId = user.Id,
-                DisplayName = user.DisplayName,
-                CreatedAt = user.CreatedAt,
-                HasPassword = hasPassword,
-                Emails = user.Emails.Select(e => new EmailInfo
-                {
-                    Email = e.Email,
-                    IsPrimary = e.IsPrimary,
-                    IsVerified = e.VerifiedAt.HasValue
-                }).ToList(),
-                Providers = user.Providers
-                    .Where(p => p.Provider != AuthProviderType.Password)
-                    .Select(p => new ProviderInfo
-                    {
-                        Provider = p.Provider.ToString(),
-                        LinkedAt = p.CreatedAt
-                    }).ToList()
-            });
         }
 
         // ===================== Helpers =====================

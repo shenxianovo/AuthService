@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using AuthService.Configuration;
 using AuthService.Services;
 using Microsoft.Extensions.Options;
 
@@ -147,7 +148,7 @@ namespace AuthService.Tests.Unit.Services
             var otherService = new JwtService(Options.Create(otherOptions));
             var tokenFromOther = otherService.GenerateAccessToken(Guid.NewGuid(), Guid.NewGuid());
 
-            // Validate with original service's key â€” should fail
+            // Validate with original service's key â€?should fail
             var result = _sut.ValidateTokenAndGetUserId(tokenFromOther);
 
             Assert.Null(result);

@@ -1,23 +1,12 @@
-﻿using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.DTOs.Auth.Github;
 using AuthService.Entities;
-using Microsoft.EntityFrameworkCore;
+using AuthService.Configuration;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
 
 namespace AuthService.Services
 {
-    public class GithubOAuthOptions
-    {
-        public const string Section = "GithubOAuth";
-
-        public string ClientId { get; set; } = null!;
-        public string ClientSecret { get; set; } = null!;
-        public string CallbackUrl { get; set; } = null!;
-    }
-
     public interface IGithubAuthService
     {
         Task<AuthResponse> LoginAsync(string code, string ipAddress, string device, Guid? currentUserId = null);

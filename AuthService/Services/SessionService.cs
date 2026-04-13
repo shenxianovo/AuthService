@@ -1,6 +1,7 @@
-﻿using AuthService.Data;
+using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
+using AuthService.Configuration;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
