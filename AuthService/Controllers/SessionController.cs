@@ -8,6 +8,7 @@ namespace AuthService.Controllers
 {
     [ApiController]
     [Route("api/v1/auth")]
+    [Produces("application/json")]
     public class SessionController(
         ISessionService sessionService,
         IJwtService jwtService) : ControllerBase
@@ -17,6 +18,8 @@ namespace AuthService.Controllers
         /// The old refresh token is immediately revoked after use.
         /// </summary>
         [HttpPost("refresh")]
+        [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
         {
             var result = await sessionService.RefreshSessionAsync(request.RefreshToken);
@@ -29,6 +32,8 @@ namespace AuthService.Controllers
         /// </summary>
         [Authorize]
         [HttpPost("logout")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Logout()
         {
             var authHeader = Request.Headers.Authorization.ToString();

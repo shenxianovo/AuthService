@@ -11,6 +11,7 @@ namespace AuthService.Controllers
 {
     [ApiController]
     [Route("api/v1/auth")]
+    [Produces("application/json")]
     public class OAuthController(
         IGithubAuthService githubAuthService,
         IGoogleAuthService googleAuthService,

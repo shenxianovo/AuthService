@@ -9,12 +9,16 @@ namespace AuthService.Controllers
 {
     [ApiController]
     [Route("api/v1/auth")]
+    [Produces("application/json")]
     public class UserController(
         IPasswordAuthService passwordAuthService,
         IUserService userService) : ControllerBase
     {
         [Authorize]
         [HttpPost("add-password")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> AddPassword([FromBody] AddPasswordRequest request)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -27,6 +31,9 @@ namespace AuthService.Controllers
 
         [Authorize]
         [HttpGet("me")]
+        [ProducesResponseType<UserInfoResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetMe()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
