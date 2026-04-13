@@ -2,6 +2,7 @@ using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
 using AuthService.Configuration;
+using AuthService.Exceptions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -121,7 +122,7 @@ namespace AuthService.Tests.Unit.Services
 
             await _sut.RegisterAsync(request, "127.0.0.1", "TestAgent");
 
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<ConflictException>(
                 () => _sut.RegisterAsync(request, "127.0.0.1", "TestAgent"));
         }
 

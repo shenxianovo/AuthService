@@ -1,6 +1,7 @@
 using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Configuration;
+using AuthService.Exceptions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -78,7 +79,7 @@ namespace AuthService.Tests.Unit.Services
             });
             await _db.SaveChangesAsync();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<BusinessException>(
                 () => _sut.AddPasswordAsync(user.Id, "NewPassword123"));
         }
 
@@ -87,7 +88,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var nonExistentUserId = Guid.NewGuid();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(
+            await Assert.ThrowsAsync<BusinessException>(
                 () => _sut.AddPasswordAsync(nonExistentUserId, "NewPassword123"));
         }
     }

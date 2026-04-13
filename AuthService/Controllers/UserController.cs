@@ -16,19 +16,12 @@ namespace AuthService.Controllers
         [HttpPost("add-password")]
         public async Task<IActionResult> AddPassword([FromBody] AddPasswordRequest request)
         {
-            try
-            {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!Guid.TryParse(userIdClaim, out var userId))
-                    return Unauthorized();
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
 
-                await passwordAuthService.AddPasswordAsync(userId, request.Password);
-                return Ok(new { message = "Password added successfully." });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            await passwordAuthService.AddPasswordAsync(userId, request.Password);
+            return Ok(new { message = "Password added successfully." });
         }
 
         [Authorize]

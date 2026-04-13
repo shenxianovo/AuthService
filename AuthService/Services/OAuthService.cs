@@ -1,5 +1,6 @@
 using AuthService.Data;
 using AuthService.Entities;
+using AuthService.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Services

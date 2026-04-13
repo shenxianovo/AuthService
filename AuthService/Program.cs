@@ -1,6 +1,7 @@
 using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Configuration;
+using AuthService.Middleware;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -83,6 +84,8 @@ app.UseForwardedHeaders();
 //     else
 //         db.Database.EnsureCreated();
 // }
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

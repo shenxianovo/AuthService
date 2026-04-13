@@ -1,6 +1,7 @@
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
+using AuthService.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ namespace AuthService.Services
             var emailExists = await db.UserEmails
                 .AnyAsync(e => e.Email == request.Email.ToLowerInvariant());
             if (emailExists)
-                throw new InvalidOperationException("Email already registered.");
+                throw new ConflictException("Email already registered.");
 
             var user = new User
             {
@@ -95,10 +96,10 @@ namespace AuthService.Services
                 .FirstOrDefaultAsync(u => u.Id == userId);
                 
             if (user is null)
-                throw new InvalidOperationException("User not found.");
-                
+                throw new BusinessException("User not found.");
+
             if (user.PasswordCredential is not null)
-                throw new InvalidOperationException("User already has a password.");
+                throw new BusinessException("User already has a password.");
                 
             var credential = new PasswordCredential
             {
