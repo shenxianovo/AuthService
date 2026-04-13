@@ -1,6 +1,8 @@
 ﻿using AuthService.Data;
+using AuthService.Entities;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
@@ -32,6 +34,12 @@ builder.Services.Configure<GithubOAuthOptions>(builder.Configuration.GetSection(
 
 // Google OAuth
 builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(GoogleOAuthOptions.Section));
+
+// OAuth Security
+builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSection(OAuthSecurityOptions.Section));
+
+// Password hasher (uses ASP.NET Core Identity's battle-tested implementation)
+builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
 // Auth services
 builder.Services.AddScoped<SessionService>();

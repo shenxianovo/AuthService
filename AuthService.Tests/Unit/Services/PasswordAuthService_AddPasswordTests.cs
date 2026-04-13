@@ -1,6 +1,7 @@
 using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -32,7 +33,8 @@ namespace AuthService.Tests.Unit.Services
             });
 
             var sessionService = new SessionService(_db, jwtServiceMock.Object, jwtOptions);
-            _sut = new PasswordAuthService(_db, sessionService);
+            var passwordHasher = new PasswordHasher<User>();
+            _sut = new PasswordAuthService(_db, sessionService, passwordHasher);
         }
 
         public void Dispose() => _db.Dispose();
@@ -55,7 +57,8 @@ namespace AuthService.Tests.Unit.Services
 
             var credential = await _db.PasswordCredentials.FirstOrDefaultAsync(c => c.UserId == user.Id);
             Assert.NotNull(credential);
-            Assert.Contains(".", credential.PasswordHash); // salt.hash format
+            Assert.NotEmpty(credential.PasswordHash);
+            Assert.NotEqual("NewPassword123", credential.PasswordHash); // should be hashed, not plaintext
 
             var passwordProvider = await _db.AuthProviders
                 .FirstOrDefaultAsync(p => p.UserId == user.Id && p.Provider == AuthProviderType.Password);

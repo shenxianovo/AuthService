@@ -1,7 +1,7 @@
 using AuthService.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace AuthService.Tests.Unit.Services
 {
@@ -15,18 +15,19 @@ namespace AuthService.Tests.Unit.Services
             var dataProtectionProvider = DataProtectionProvider.Create("TestApp");
             _cache = new MemoryCache(new MemoryCacheOptions());
 
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["OAuthSecurity:AllowedRedirectOrigins:0"] = "https://example.com",
-                    ["OAuthSecurity:AllowedRedirectOrigins:1"] = "https://*.shenxianovo.com",
-                    ["OAuthSecurity:AllowedRedirectOrigins:2"] = "http://localhost:3000",
-                    ["OAuthSecurity:AuthCodeExpirationSeconds"] = "60",
-                    ["OAuthSecurity:StateExpirationSeconds"] = "600",
-                })
-                .Build();
+            var options = Options.Create(new OAuthSecurityOptions
+            {
+                AllowedRedirectOrigins =
+                [
+                    "https://example.com",
+                    "https://*.shenxianovo.com",
+                    "http://localhost:3000",
+                ],
+                AuthCodeExpirationSeconds = 60,
+                StateExpirationSeconds = 600,
+            });
 
-            _sut = new OAuthSecurityService(dataProtectionProvider, _cache, config);
+            _sut = new OAuthSecurityService(dataProtectionProvider, _cache, options);
         }
 
         public void Dispose() => _cache.Dispose();
@@ -91,20 +92,19 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public void ValidateState_WithExpiredState_ReturnsNull()
         {
-            // Create a service with very short state expiration
-            var dataProtectionProvider = DataProtectionProvider.Create("TestApp");
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["OAuthSecurity:StateExpirationSeconds"] = "1", // expires after 1 second
-                })
-                .Build();
-            var shortLivedService = new OAuthSecurityService(dataProtectionProvider, _cache, config);
+            // Create a service with very short state expiration (1 second)
+            var shortLivedOptions = Options.Create(new OAuthSecurityOptions
+            {
+                StateExpirationSeconds = 1,
+            });
+            var shortLivedService = new OAuthSecurityService(
+                DataProtectionProvider.Create("TestApp"), _cache, shortLivedOptions);
 
             var state = shortLivedService.GenerateState("https://example.com", null);
 
-            // Wait for expiration
-            Thread.Sleep(1100);
+            // Wait long enough to ensure the 1-second expiration has passed
+            // (using 2100ms to account for second-level timestamp truncation)
+            Thread.Sleep(2100);
             var payload = shortLivedService.ValidateState(state);
 
             Assert.Null(payload);
@@ -226,16 +226,14 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public void ExchangeAuthCode_WithExpiredCode_ReturnsNull()
         {
-            // Create a service with very short auth code expiration
-            var dataProtectionProvider = DataProtectionProvider.Create("TestApp");
+            // Create a service with very short auth code expiration (1 second)
             var shortCache = new MemoryCache(new MemoryCacheOptions());
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["OAuthSecurity:AuthCodeExpirationSeconds"] = "1",
-                })
-                .Build();
-            var shortLivedService = new OAuthSecurityService(dataProtectionProvider, shortCache, config);
+            var shortLivedOptions = Options.Create(new OAuthSecurityOptions
+            {
+                AuthCodeExpirationSeconds = 1,
+            });
+            var shortLivedService = new OAuthSecurityService(
+                DataProtectionProvider.Create("TestApp"), shortCache, shortLivedOptions);
 
             var code = shortLivedService.GenerateAuthCode(Guid.NewGuid(), "access", "refresh", DateTimeOffset.UtcNow.AddMinutes(15));
 

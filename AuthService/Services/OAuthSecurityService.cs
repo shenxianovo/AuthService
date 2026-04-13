@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace AuthService.Services
@@ -54,12 +55,10 @@ namespace AuthService.Services
     public class OAuthSecurityService(
         IDataProtectionProvider dataProtection,
         IMemoryCache cache,
-        IConfiguration configuration) : IOAuthSecurityService
+        IOptions<OAuthSecurityOptions> options) : IOAuthSecurityService
     {
         private readonly IDataProtector _protector = dataProtection.CreateProtector("OAuthState");
-        private readonly OAuthSecurityOptions _options = configuration
-            .GetSection(OAuthSecurityOptions.Section)
-            .Get<OAuthSecurityOptions>() ?? new OAuthSecurityOptions();
+        private readonly OAuthSecurityOptions _options = options.Value;
 
         /// <summary>
         /// Generate a signed, tamper-proof state parameter for OAuth flows.

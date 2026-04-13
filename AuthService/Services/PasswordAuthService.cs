@@ -1,9 +1,8 @@
-using System.Security.Cryptography;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AuthService.Services
 {
@@ -16,7 +15,8 @@ namespace AuthService.Services
 
     public class PasswordAuthService(
         AppDbContext db,
-        SessionService sessionService) : IPasswordAuthService
+        SessionService sessionService,
+        IPasswordHasher<User> passwordHasher) : IPasswordAuthService
     {
         public async Task<AuthResponse> RegisterAsync(RegisterRequest request, string ipAddress, string device)
         {
@@ -41,7 +41,7 @@ namespace AuthService.Services
             var passwordCredential = new PasswordCredential
             {
                 UserId = user.Id,
-                PasswordHash = HashPassword(request.Password),
+                PasswordHash = passwordHasher.HashPassword(user, request.Password),
             };
 
             var authProvider = new AuthProvider
@@ -73,10 +73,17 @@ namespace AuthService.Services
             if (credential is null)
                 throw new UnauthorizedAccessException("Invalid email or password.");
 
-            if (!VerifyPassword(request.Password, credential.PasswordHash))
+            var user = userEmail.User;
+            var verifyResult = passwordHasher.VerifyHashedPassword(user, credential.PasswordHash, request.Password);
+
+            if (verifyResult == PasswordVerificationResult.Failed)
                 throw new UnauthorizedAccessException("Invalid email or password.");
 
-            var user = userEmail.User;
+            // Auto-rehash if the hasher indicates the hash needs upgrading
+            if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                credential.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+            }
 
             return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }
@@ -96,7 +103,7 @@ namespace AuthService.Services
             var credential = new PasswordCredential
             {
                 UserId = userId,
-                PasswordHash = HashPassword(password)
+                PasswordHash = passwordHasher.HashPassword(user, password)
             };
             
             db.PasswordCredentials.Add(credential);
@@ -110,27 +117,6 @@ namespace AuthService.Services
             db.AuthProviders.Add(authProvider);
             
             await db.SaveChangesAsync();
-        }
-
-        // --- Password hashing (BCrypt-like using PBKDF2) ---
-
-        private static string HashPassword(string password)
-        {
-            var salt = RandomNumberGenerator.GetBytes(16);
-            var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 100_000, HashAlgorithmName.SHA256, 32);
-            return $"{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
-        }
-
-        private static bool VerifyPassword(string password, string storedHash)
-        {
-            var parts = storedHash.Split('.');
-            if (parts.Length != 2) return false;
-
-            var salt = Convert.FromBase64String(parts[0]);
-            var expectedHash = Convert.FromBase64String(parts[1]);
-            var actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 100_000, HashAlgorithmName.SHA256, 32);
-
-            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
         }
     }
 }
