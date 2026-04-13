@@ -57,8 +57,7 @@ namespace AuthService.Services
             if (!userResult.IsSuccess)
                 return Result<AuthResponse>.Fail(userResult.Error, userResult.ErrorMessage);
 
-            var session = await sessionService.CreateSessionAsync(userResult.Value.Id, ipAddress, device);
-            return Result<AuthResponse>.Ok(session);
+            return await sessionService.CreateSessionAsync(userResult.Value.Id, ipAddress, device);
         }
 
         /// <summary>

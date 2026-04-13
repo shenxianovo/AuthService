@@ -44,10 +44,10 @@ namespace AuthService.Tests.Unit.Services
 
             var result = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
 
-            Assert.NotNull(result);
-            Assert.Equal(userId, result.UserId);
-            Assert.Equal("fake-access-token", result.AccessToken);
-            Assert.NotEmpty(result.RefreshToken);
+            Assert.True(result.IsSuccess);
+            Assert.Equal(userId, result.Value.UserId);
+            Assert.Equal("fake-access-token", result.Value.AccessToken);
+            Assert.NotEmpty(result.Value.RefreshToken);
 
             var session = await _db.Sessions.FirstOrDefaultAsync();
             Assert.NotNull(session);
@@ -88,7 +88,7 @@ namespace AuthService.Tests.Unit.Services
             Assert.NotNull(refreshToken);
 
             // The stored hash should NOT equal the raw token
-            Assert.NotEqual(result.RefreshToken, refreshToken.TokenHash);
+            Assert.NotEqual(result.Value.RefreshToken, refreshToken.TokenHash);
         }
 
         [Fact]
@@ -99,9 +99,9 @@ namespace AuthService.Tests.Unit.Services
 
             var result = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
 
-            Assert.True(result.ExpiresAt > before);
+            Assert.True(result.Value.ExpiresAt > before);
             // Should be approximately AccessTokenExpirationMinutes (15) in the future
-            Assert.True(result.ExpiresAt < before.AddMinutes(16));
+            Assert.True(result.Value.ExpiresAt < before.AddMinutes(16));
         }
 
         [Fact]

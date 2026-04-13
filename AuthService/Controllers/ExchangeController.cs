@@ -1,4 +1,5 @@
 using AuthService.DTOs.Auth;
+using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,10 +15,11 @@ namespace AuthService.Controllers
         [HttpPost("exchange")]
         public IActionResult ExchangeCode([FromBody] ExchangeCodeRequest request)
         {
-            var payload = oauthSecurity.ExchangeAuthCode(request.Code);
-            if (payload == null)
-                return BadRequest(new { message = "Invalid or expired authorization code." });
+            var result = oauthSecurity.ExchangeAuthCode(request.Code);
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result.Error);
 
+            var payload = result.Value;
             return Ok(new AuthResponse
             {
                 UserId = payload.UserId,

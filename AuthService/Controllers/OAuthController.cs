@@ -27,7 +27,9 @@ namespace AuthService.Controllers
         public IActionResult GithubLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
         {
             // Validate redirect URL against whitelist
-            oauthSecurity.ValidateRedirectUrl(redirectUrl);
+            var redirectValidation = oauthSecurity.ValidateRedirectUrl(redirectUrl);
+            if (!redirectValidation.IsSuccess)
+                return this.ToErrorResponse(redirectValidation.Error, redirectValidation.ErrorMessage);
 
             // Parse binding userId from JWT (if provided)
             Guid? userId = null;
@@ -61,7 +63,9 @@ namespace AuthService.Controllers
         [HttpGet("google/login")]
         public IActionResult GoogleLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
         {
-            oauthSecurity.ValidateRedirectUrl(redirectUrl);
+            var redirectValidation = oauthSecurity.ValidateRedirectUrl(redirectUrl);
+            if (!redirectValidation.IsSuccess)
+                return this.ToErrorResponse(redirectValidation.Error, redirectValidation.ErrorMessage);
 
             Guid? userId = null;
             if (!string.IsNullOrEmpty(token))

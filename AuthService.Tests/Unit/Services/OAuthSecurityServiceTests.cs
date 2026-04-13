@@ -1,3 +1,4 @@
+using AuthService.Common;
 using AuthService.Configuration;
 using AuthService.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -114,66 +115,69 @@ namespace AuthService.Tests.Unit.Services
         // ===================== Redirect URL Validation =====================
 
         [Fact]
-        public void ValidateRedirectUrl_WithNullUrl_DoesNotThrow()
+        public void ValidateRedirectUrl_WithNullUrl_ReturnsSuccess()
         {
-            var ex = Record.Exception(() => _sut.ValidateRedirectUrl(null));
-            Assert.Null(ex);
+            var result = _sut.ValidateRedirectUrl(null);
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithEmptyUrl_DoesNotThrow()
+        public void ValidateRedirectUrl_WithEmptyUrl_ReturnsSuccess()
         {
-            var ex = Record.Exception(() => _sut.ValidateRedirectUrl(""));
-            Assert.Null(ex);
+            var result = _sut.ValidateRedirectUrl("");
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithAllowedExactOrigin_DoesNotThrow()
+        public void ValidateRedirectUrl_WithAllowedExactOrigin_ReturnsSuccess()
         {
-            var ex = Record.Exception(() => _sut.ValidateRedirectUrl("https://example.com/some/path"));
-            Assert.Null(ex);
+            var result = _sut.ValidateRedirectUrl("https://example.com/some/path");
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithAllowedWildcardSubdomain_DoesNotThrow()
+        public void ValidateRedirectUrl_WithAllowedWildcardSubdomain_ReturnsSuccess()
         {
-            var ex = Record.Exception(() => _sut.ValidateRedirectUrl("https://app.shenxianovo.com/callback"));
-            Assert.Null(ex);
+            var result = _sut.ValidateRedirectUrl("https://app.shenxianovo.com/callback");
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithAllowedBaseDomainOfWildcard_DoesNotThrow()
+        public void ValidateRedirectUrl_WithAllowedBaseDomainOfWildcard_ReturnsSuccess()
         {
-            var ex = Record.Exception(() => _sut.ValidateRedirectUrl("https://shenxianovo.com/callback"));
-            Assert.Null(ex);
+            var result = _sut.ValidateRedirectUrl("https://shenxianovo.com/callback");
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithAllowedLocalhostOrigin_DoesNotThrow()
+        public void ValidateRedirectUrl_WithAllowedLocalhostOrigin_ReturnsSuccess()
         {
-            var ex = Record.Exception(() => _sut.ValidateRedirectUrl("http://localhost:3000/auth/callback"));
-            Assert.Null(ex);
+            var result = _sut.ValidateRedirectUrl("http://localhost:3000/auth/callback");
+            Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithDisallowedOrigin_ThrowsInvalidOperation()
+        public void ValidateRedirectUrl_WithDisallowedOrigin_ReturnsFailure()
         {
-            Assert.Throws<InvalidOperationException>(
-                () => _sut.ValidateRedirectUrl("https://evil.com/callback"));
+            var result = _sut.ValidateRedirectUrl("https://evil.com/callback");
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRedirectUrl, result.Error);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithInvalidUrl_ThrowsInvalidOperation()
+        public void ValidateRedirectUrl_WithInvalidUrl_ReturnsFailure()
         {
-            Assert.Throws<InvalidOperationException>(
-                () => _sut.ValidateRedirectUrl("not-a-url"));
+            var result = _sut.ValidateRedirectUrl("not-a-url");
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRedirectUrl, result.Error);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithFtpScheme_ThrowsInvalidOperation()
+        public void ValidateRedirectUrl_WithFtpScheme_ReturnsFailure()
         {
-            Assert.Throws<InvalidOperationException>(
-                () => _sut.ValidateRedirectUrl("ftp://example.com/file"));
+            var result = _sut.ValidateRedirectUrl("ftp://example.com/file");
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRedirectUrl, result.Error);
         }
 
         // ===================== Auth Code Generation & Exchange =====================
@@ -188,7 +192,7 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public void ExchangeAuthCode_WithValidCode_ReturnsPayload()
+        public void ExchangeAuthCode_WithValidCode_ReturnsSuccess()
         {
             var userId = Guid.NewGuid();
             var accessToken = "test-access-token";
@@ -196,12 +200,12 @@ namespace AuthService.Tests.Unit.Services
             var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
 
             var code = _sut.GenerateAuthCode(userId, accessToken, refreshToken, expiresAt);
-            var payload = _sut.ExchangeAuthCode(code);
+            var result = _sut.ExchangeAuthCode(code);
 
-            Assert.NotNull(payload);
-            Assert.Equal(userId, payload.UserId);
-            Assert.Equal(accessToken, payload.AccessToken);
-            Assert.Equal(refreshToken, payload.RefreshToken);
+            Assert.True(result.IsSuccess);
+            Assert.Equal(userId, result.Value.UserId);
+            Assert.Equal(accessToken, result.Value.AccessToken);
+            Assert.Equal(refreshToken, result.Value.RefreshToken);
         }
 
         [Fact]
@@ -212,20 +216,22 @@ namespace AuthService.Tests.Unit.Services
             var first = _sut.ExchangeAuthCode(code);
             var second = _sut.ExchangeAuthCode(code);
 
-            Assert.NotNull(first);
-            Assert.Null(second);
+            Assert.True(first.IsSuccess);
+            Assert.False(second.IsSuccess);
+            Assert.Equal(AuthError.InvalidAuthCode, second.Error);
         }
 
         [Fact]
-        public void ExchangeAuthCode_WithInvalidCode_ReturnsNull()
+        public void ExchangeAuthCode_WithInvalidCode_ReturnsFailure()
         {
-            var payload = _sut.ExchangeAuthCode("non-existent-code");
+            var result = _sut.ExchangeAuthCode("non-existent-code");
 
-            Assert.Null(payload);
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidAuthCode, result.Error);
         }
 
         [Fact]
-        public void ExchangeAuthCode_WithExpiredCode_ReturnsNull()
+        public void ExchangeAuthCode_WithExpiredCode_ReturnsFailure()
         {
             // Create a service with very short auth code expiration (1 second)
             var shortCache = new MemoryCache(new MemoryCacheOptions());
@@ -240,9 +246,10 @@ namespace AuthService.Tests.Unit.Services
 
             // Wait for expiration
             Thread.Sleep(1100);
-            var payload = shortLivedService.ExchangeAuthCode(code);
+            var result = shortLivedService.ExchangeAuthCode(code);
 
-            Assert.Null(payload);
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidAuthCode, result.Error);
             shortCache.Dispose();
         }
     }

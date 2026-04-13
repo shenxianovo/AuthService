@@ -1,3 +1,4 @@
+using AuthService.Common;
 using AuthService.Configuration;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
@@ -10,9 +11,9 @@ namespace AuthService.Services
     {
         string GenerateState(string? redirectUrl, Guid? userId);
         OAuthStatePayload? ValidateState(string protectedState);
-        void ValidateRedirectUrl(string? redirectUrl);
+        Result ValidateRedirectUrl(string? redirectUrl);
         string GenerateAuthCode(Guid userId, string accessToken, string refreshToken, DateTimeOffset expiresAt);
-        AuthCodePayload? ExchangeAuthCode(string code);
+        Result<AuthCodePayload> ExchangeAuthCode(string code);
     }
 
     public class OAuthSecurityService(
@@ -68,18 +69,18 @@ namespace AuthService.Services
 
         /// <summary>
         /// Validate that the redirect URL is in the allowed list.
-        /// Throws InvalidOperationException if not allowed.
+        /// Returns Result.Fail(InvalidRedirectUrl) if not allowed; Result.Ok() otherwise.
         /// </summary>
-        public void ValidateRedirectUrl(string? redirectUrl)
+        public Result ValidateRedirectUrl(string? redirectUrl)
         {
             if (string.IsNullOrEmpty(redirectUrl))
-                return;
+                return Result.Ok();
 
             if (!Uri.TryCreate(redirectUrl, UriKind.Absolute, out var uri))
-                throw new InvalidOperationException("Invalid redirect URL.");
+                return Result.Fail(AuthError.InvalidRedirectUrl, "Invalid redirect URL.");
 
             if (uri.Scheme != "https" && uri.Scheme != "http")
-                throw new InvalidOperationException("Invalid redirect URL scheme.");
+                return Result.Fail(AuthError.InvalidRedirectUrl, "Invalid redirect URL scheme.");
 
             var host = uri.Host;
             var origin = $"{uri.Scheme}://{uri.Authority}";
@@ -102,17 +103,17 @@ namespace AuthService.Services
                         // Match the base domain itself or any subdomain
                         if (string.Equals(host, baseDomain, StringComparison.OrdinalIgnoreCase) ||
                             host.EndsWith($".{baseDomain}", StringComparison.OrdinalIgnoreCase))
-                            return;
+                            return Result.Ok();
                     }
                     continue;
                 }
 
                 // Exact origin match
                 if (string.Equals(origin, trimmed, StringComparison.OrdinalIgnoreCase))
-                    return;
+                    return Result.Ok();
             }
 
-            throw new InvalidOperationException("Redirect URL is not allowed.");
+            return Result.Fail(AuthError.InvalidRedirectUrl, "Redirect URL is not allowed.");
         }
 
         /// <summary>
@@ -135,18 +136,19 @@ namespace AuthService.Services
         }
 
         /// <summary>
-        /// Exchange a one-time authorization code for tokens. Returns null if invalid/expired.
+        /// Exchange a one-time authorization code for tokens.
+        /// Returns Result.Fail(InvalidAuthCode) if the code is invalid or expired.
         /// The code is consumed and cannot be reused.
         /// </summary>
-        public AuthCodePayload? ExchangeAuthCode(string code)
+        public Result<AuthCodePayload> ExchangeAuthCode(string code)
         {
             var key = $"authcode:{code}";
             if (cache.TryGetValue(key, out AuthCodePayload? payload))
             {
                 cache.Remove(key); // one-time use
-                return payload;
+                return Result<AuthCodePayload>.Ok(payload!);
             }
-            return null;
+            return Result<AuthCodePayload>.Fail(AuthError.InvalidAuthCode);
         }
     }
 }

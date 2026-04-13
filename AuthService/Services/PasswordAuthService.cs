@@ -47,8 +47,7 @@ namespace AuthService.Services
                 UserId = user.Id,
             });
 
-            var session = await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
-            return Result<AuthResponse>.Ok(session);
+            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }
 
         public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, string ipAddress, string device)
@@ -74,8 +73,7 @@ namespace AuthService.Services
             if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
                 credential.PasswordHash = passwordHasher.HashPassword(user, request.Password);
 
-            var session = await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
-            return Result<AuthResponse>.Ok(session);
+            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
         }
 
         public async Task<Result> AddPasswordAsync(Guid userId, string password)

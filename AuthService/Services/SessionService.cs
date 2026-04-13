@@ -11,7 +11,7 @@ namespace AuthService.Services
 {
     public interface ISessionService
     {
-        Task<AuthResponse> CreateSessionAsync(Guid userId, string ipAddress, string device);
+        Task<Result<AuthResponse>> CreateSessionAsync(Guid userId, string ipAddress, string device);
         Task<Result<AuthResponse>> RefreshSessionAsync(string refreshToken);
         Task RevokeSessionAsync(Guid sessionId);
     }
@@ -20,7 +20,7 @@ namespace AuthService.Services
     {
         private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
-        public async Task<AuthResponse> CreateSessionAsync(
+        public async Task<Result<AuthResponse>> CreateSessionAsync(
             Guid userId,
             string ipAddress,
             string device)
@@ -49,13 +49,13 @@ namespace AuthService.Services
 
             var accessToken = jwtService.GenerateAccessToken(userId, session.Id);
 
-            return new AuthResponse
+            return Result<AuthResponse>.Ok(new AuthResponse
             {
                 UserId = userId,
                 AccessToken = accessToken,
                 RefreshToken = rawToken,
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
-            };
+            });
         }
 
         public async Task<Result<AuthResponse>> RefreshSessionAsync(string rawRefreshToken)

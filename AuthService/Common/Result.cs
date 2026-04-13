@@ -71,6 +71,7 @@ namespace AuthService.Common
         PasswordAlreadySet,
         InvalidAuthCode,
         InvalidOAuthState,
+        InvalidRedirectUrl,
 
         // 401 Unauthorized
         InvalidCredentials,

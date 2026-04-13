@@ -28,6 +28,9 @@ namespace AuthService.Extensions
                 AuthError.InvalidOAuthState =>
                     controller.BadRequest(new { message = message ?? "Invalid or expired OAuth state." }),
 
+                AuthError.InvalidRedirectUrl =>
+                    controller.BadRequest(new { message = message ?? "Redirect URL is not allowed." }),
+
                 AuthError.InvalidCredentials =>
                     controller.Unauthorized(new { message = message ?? "Invalid credentials." }),
 
