@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using AuthService.Data;
+using AuthService.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -7,12 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AuthService.Tests.Fixtures
 {
-    public class ApiTestFixture : IDisposable
+    public class ApiTestFixture : IAsyncLifetime
     {
-        public HttpClient Client { get; }
-        private readonly string _tempKeyDir;
+        public HttpClient Client { get; private set; } = null!;
+        public WebApplicationFactory<Program> Factory { get; private set; } = null!;
+        private string _tempKeyDir = null!;
 
-        public ApiTestFixture()
+        public async ValueTask InitializeAsync()
         {
             // Generate a test RSA key pair and write to temp files
             _tempKeyDir = Path.Combine(Path.GetTempPath(), $"authservice-test-keys-{Guid.NewGuid()}");
@@ -24,7 +26,7 @@ namespace AuthService.Tests.Fixtures
             File.WriteAllText(privateKeyPath, rsa.ExportRSAPrivateKeyPem());
             File.WriteAllText(publicKeyPath, rsa.ExportRSAPublicKeyPem());
 
-            var factory = new WebApplicationFactory<Program>()
+            Factory = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
                     builder.ConfigureAppConfiguration((context, config) =>
@@ -35,6 +37,12 @@ namespace AuthService.Tests.Fixtures
                             ["Jwt:PublicKeyPath"] = publicKeyPath,
                             ["Jwt:Issuer"] = "test-issuer",
                             ["Jwt:Audience"] = "test-audience",
+                            ["Jwt:AccessTokenExpirationMinutes"] = "15",
+                            ["Jwt:RefreshTokenExpirationDays"] = "30",
+                            ["Jwt:SessionExpirationDays"] = "30",
+                            ["OAuthSecurity:AllowedRedirectOrigins:0"] = "https://example.com",
+                            ["OAuthSecurity:AuthCodeExpirationSeconds"] = "60",
+                            ["OAuthSecurity:StateExpirationSeconds"] = "600",
                         });
                     });
 
@@ -51,18 +59,39 @@ namespace AuthService.Tests.Fixtures
                         foreach (var d in efServiceTypes)
                             services.Remove(d);
 
-                        // Add InMemory database
+                        // Add InMemory database with unique name per fixture instance
+                        var dbName = $"TestDb-{Guid.NewGuid()}";
                         services.AddDbContext<AppDbContext>(options =>
-                            options.UseInMemoryDatabase("TestDb"));
+                            options.UseInMemoryDatabase(dbName));
                     });
                 });
 
-            Client = factory.CreateClient();
+            Client = Factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false // important for OAuth redirect tests
+            });
+
+            await Task.CompletedTask;
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Create a scope to access services (e.g. for seeding data or getting JWT tokens).
+        /// </summary>
+        public IServiceScope CreateScope() => Factory.Services.CreateScope();
+
+        /// <summary>
+        /// Generate an access token for a given user ID using the test JwtService.
+        /// </summary>
+        public string GenerateAccessToken(Guid userId, Guid? sessionId = null)
+        {
+            var jwtService = Factory.Services.GetRequiredService<IJwtService>();
+            return jwtService.GenerateAccessToken(userId, sessionId ?? Guid.NewGuid());
+        }
+
+        public async ValueTask DisposeAsync()
         {
             Client.Dispose();
+            await Factory.DisposeAsync();
             if (Directory.Exists(_tempKeyDir))
                 Directory.Delete(_tempKeyDir, recursive: true);
         }
