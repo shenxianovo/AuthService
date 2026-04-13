@@ -68,6 +68,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             # Copy RSA keys into the new release
+            mkdir -p /srv/AuthService/releases/${{ github.run_id }}/Keys
             cp /srv/keys/AuthService/* /srv/AuthService/releases/${{ github.run_id }}/Keys/
 
             # Atomic symlink switch
