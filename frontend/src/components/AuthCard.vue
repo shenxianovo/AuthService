@@ -21,6 +21,9 @@
         @googleBind="handleGoogleBind"
         @unlinkProvider="handleUnlinkProvider"
         @verifyEmail="handleVerifyEmailFromProfile"
+        @addEmail="handleAddEmail"
+        @removeEmail="handleRemoveEmail"
+        @setPrimaryEmail="handleSetPrimaryEmail"
         @logout="handleLogout"
       />
 
@@ -225,6 +228,34 @@ async function handleUnlinkProvider(provider: string) {
     successMsg.value = `${provider} account unlinked successfully!`
     await fetchUserInfo()
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to unlink provider' }
+  finally { loading.value = false }
+}
+
+async function handleAddEmail(email: string) {
+  resetMessages(); loading.value = true
+  try {
+    await api.addEmail(email)
+    successMsg.value = 'Verification code sent to new email.'
+    await fetchUserInfo()
+  } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to add email' }
+  finally { loading.value = false }
+}
+
+async function handleRemoveEmail(email: string) {
+  resetMessages(); loading.value = true
+  try {
+    await api.removeEmail(email)
+    await fetchUserInfo()
+  } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to remove email' }
+  finally { loading.value = false }
+}
+
+async function handleSetPrimaryEmail(email: string) {
+  resetMessages(); loading.value = true
+  try {
+    await api.setPrimaryEmail(email)
+    await fetchUserInfo()
+  } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to set primary email' }
   finally { loading.value = false }
 }
 

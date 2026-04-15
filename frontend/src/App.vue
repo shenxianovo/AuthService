@@ -62,6 +62,9 @@ import AuthCard from '@/components/AuthCard.vue'
 .btn-verify-email { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; border: 1px solid #f59e0b; background: #fffbeb; color: #d97706; cursor: pointer; transition: background .15s, color .15s; }
 .btn-verify-email:hover:not(:disabled) { background: #f59e0b; color: #fff; }
 .btn-verify-email:disabled { opacity: .4; cursor: not-allowed; }
+.btn-set-primary { padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; border: 1px solid #6366f1; background: #eef2ff; color: #4f46e5; cursor: pointer; transition: background .15s, color .15s; }
+.btn-set-primary:hover:not(:disabled) { background: #6366f1; color: #fff; }
+.btn-set-primary:disabled { opacity: .4; cursor: not-allowed; }
 .provider-icon { width: 8px; height: 8px; border-radius: 50%; }
 .provider-icon.github { background: #24292e; }
 .provider-icon.google { background: #4285f4; }

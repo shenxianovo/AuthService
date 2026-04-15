@@ -59,6 +59,49 @@ namespace AuthService.Services
                 code);
         }
 
+        public async Task SendVerificationCodeByEmailIdAsync(Guid userId, Guid emailId)
+        {
+            var userEmail = await db.Set<UserEmail>()
+                .Include(e => e.User)
+                .FirstOrDefaultAsync(e => e.Id == emailId && e.UserId == userId)
+                ?? throw new BusinessException("邮箱不存在。");
+
+            if (userEmail.VerifiedAt is not null)
+                throw new BusinessException("邮箱已验证。");
+
+            // Rate limit: only one send per minute
+            var oneMinuteAgo = DateTimeOffset.UtcNow.AddMinutes(-1);
+            var recentVerification = await db.Set<EmailVerification>()
+                .AnyAsync(v => v.UserEmailId == userEmail.Id
+                            && !v.Used
+                            && v.ExpiresAt > DateTimeOffset.UtcNow
+                            && v.CreatedAt > oneMinuteAgo);
+
+            if (recentVerification)
+                throw new BusinessException("请稍后再试。");
+
+            var code = Random.Shared.Next(100000, 999999).ToString();
+            var tokenHash = HashCode(code);
+
+            var verification = new EmailVerification
+            {
+                Id = Guid.NewGuid(),
+                TokenHash = tokenHash,
+                CreatedAt = DateTimeOffset.UtcNow,
+                ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_options.VerificationCodeExpirationMinutes),
+                Used = false,
+                UserEmailId = userEmail.Id
+            };
+
+            db.Set<EmailVerification>().Add(verification);
+            await db.SaveChangesAsync();
+
+            await emailService.SendVerificationCodeAsync(
+                userEmail.Email,
+                userEmail.User!.DisplayName,
+                code);
+        }
+
         public async Task VerifyCodeAsync(Guid userId, string code)
         {
             var userEmail = await db.Set<UserEmail>()

@@ -21,7 +21,35 @@
             @click="$emit('verifyEmail')"
             :disabled="loading"
           >Verify</button>
+          <button
+            v-if="!email.isPrimary && email.isVerified"
+            class="btn-set-primary"
+            @click="emit('setPrimaryEmail', email.email!)"
+            :disabled="loading"
+          >Set Primary</button>
+          <button
+            v-if="!email.isPrimary"
+            class="btn-unlink"
+            @click="emit('removeEmail', email.email!)"
+            :disabled="loading"
+            title="Remove email"
+          >✕</button>
         </div>
+      </div>
+      <div class="input-row" style="margin-top: 8px;">
+        <input
+          type="email"
+          v-model="newEmailInput"
+          placeholder="Add email address"
+          class="input"
+          @keyup.enter="submitAddEmail"
+          :disabled="loading"
+        />
+        <button
+          class="btn btn-secondary"
+          @click="submitAddEmail"
+          :disabled="loading || !newEmailInput.trim()"
+        >Add</button>
       </div>
     </div>
     <div class="detail-group">
@@ -74,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { UserInfoResponse } from '@/api'
 
 const props = defineProps<{
@@ -84,15 +112,26 @@ const props = defineProps<{
   loading: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   addPassword: []
   githubBind: []
   googleBind: []
   unlinkProvider: [provider: string]
   verifyEmail: []
+  addEmail: [email: string]
+  removeEmail: [email: string]
+  setPrimaryEmail: [email: string]
   logout: []
   'update:newPassword': [value: string]
 }>()
+
+const newEmailInput = ref('')
+
+function submitAddEmail() {
+  if (!newEmailInput.value.trim()) return
+  emit('addEmail', newEmailInput.value.trim())
+  newEmailInput.value = ''
+}
 
 const userInitial = computed(() => {
   const n = props.userInfo?.displayName

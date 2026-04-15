@@ -325,6 +325,12 @@ export interface IPasswordAuthClient {
     sendVerificationCode(): Promise<void>;
 
     verifyEmail(request: VerifyEmailRequest): Promise<void>;
+
+    addEmail(request: AddEmailRequest): Promise<void>;
+
+    removeEmail(email: string): Promise<void>;
+
+    setPrimaryEmail(email: string): Promise<void>;
 }
 
 export class PasswordAuthClient implements IPasswordAuthClient {
@@ -510,6 +516,134 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
             result401 = ProblemDetails.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    addEmail(request: AddEmailRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/email";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAddEmail(_response);
+        });
+    }
+
+    protected processAddEmail(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ProblemDetails.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    removeEmail(email: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/email/{email}";
+        if (email === undefined || email === null)
+            throw new globalThis.Error("The parameter 'email' must be defined.");
+        url_ = url_.replace("{email}", encodeURIComponent("" + email));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRemoveEmail(_response);
+        });
+    }
+
+    protected processRemoveEmail(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    setPrimaryEmail(email: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/email/{email}/primary";
+        if (email === undefined || email === null)
+            throw new globalThis.Error("The parameter 'email' must be defined.");
+        url_ = url_.replace("{email}", encodeURIComponent("" + email));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "PUT",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processSetPrimaryEmail(_response);
+        });
+    }
+
+    protected processSetPrimaryEmail(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -1050,6 +1184,42 @@ export class VerifyEmailRequest implements IVerifyEmailRequest {
 
 export interface IVerifyEmailRequest {
     code?: string;
+}
+
+export class AddEmailRequest implements IAddEmailRequest {
+    email?: string;
+
+    constructor(data?: IAddEmailRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.email = _data["email"];
+        }
+    }
+
+    static fromJS(data: any): AddEmailRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new AddEmailRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["email"] = this.email;
+        return data;
+    }
+}
+
+export interface IAddEmailRequest {
+    email?: string;
 }
 
 export class RefreshRequest implements IRefreshRequest {

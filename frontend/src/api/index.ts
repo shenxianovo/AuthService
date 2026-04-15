@@ -12,6 +12,7 @@ import {
   SessionClient,
   UserClient,
   VerifyEmailRequest,
+  AddEmailRequest,
 } from './client'
 
 export type {
@@ -172,4 +173,16 @@ export function googleBindUrl(redirectUrl: string, accessToken: string): string 
 
 export async function unlinkProvider(provider: string): Promise<void> {
   await userClient.unlinkProvider({ provider } as any)
+}
+
+export async function addEmail(email: string): Promise<void> {
+  await authPasswordClient.addEmail(new AddEmailRequest({ email }))
+}
+
+export async function removeEmail(email: string): Promise<void> {
+  await authPasswordClient.removeEmail(email)
+}
+
+export async function setPrimaryEmail(email: string): Promise<void> {
+  await authPasswordClient.setPrimaryEmail(email)
 }

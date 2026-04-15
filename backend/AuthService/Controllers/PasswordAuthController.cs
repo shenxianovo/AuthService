@@ -13,7 +13,8 @@ namespace AuthService.Controllers
     [Produces("application/json")]
     public class PasswordAuthController(
         IPasswordAuthService passwordAuthService,
-        IEmailVerificationService emailVerificationService) : ControllerBase
+        IEmailVerificationService emailVerificationService,
+        IEmailManagementService emailManagementService) : ControllerBase
     {
         [HttpPost("register")]
         [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
@@ -59,6 +60,40 @@ namespace AuthService.Controllers
             var userId = GetCurrentUserId();
             await emailVerificationService.VerifyCodeAsync(userId, request.Code);
             return Ok(new { message = "邮箱验证成功。" });
+        }
+
+        [Authorize]
+        [HttpPost("email")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> AddEmail([FromBody] AddEmailRequest request)
+        {
+            var userId = GetCurrentUserId();
+            await emailManagementService.AddEmailAsync(userId, request.Email);
+            return Ok(new { message = "邮箱已添加，请查收验证码。" });
+        }
+
+        [Authorize]
+        [HttpDelete("email/{email}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> RemoveEmail(string email)
+        {
+            var userId = GetCurrentUserId();
+            await emailManagementService.RemoveEmailAsync(userId, email);
+            return Ok(new { message = "邮箱已删除。" });
+        }
+
+        [Authorize]
+        [HttpPut("email/{email}/primary")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> SetPrimaryEmail(string email)
+        {
+            var userId = GetCurrentUserId();
+            await emailManagementService.SetPrimaryEmailAsync(userId, email);
+            return Ok(new { message = "主邮箱已更新。" });
         }
 
         private Guid GetCurrentUserId()
