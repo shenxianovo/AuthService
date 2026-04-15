@@ -1,7 +1,7 @@
 using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Exceptions;
-using AuthService.Options;
+using AuthService.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;

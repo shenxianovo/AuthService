@@ -1,4 +1,4 @@
-namespace AuthService.Options
+namespace AuthService.Configuration
 {
     public class ResendOptions
     {

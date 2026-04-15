@@ -1,4 +1,4 @@
-using AuthService.Options;
+using AuthService.Configuration;
 using Microsoft.Extensions.Options;
 using Resend;
 

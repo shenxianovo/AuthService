@@ -2,7 +2,6 @@ using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Configuration;
 using AuthService.Middleware;
-using AuthService.Options;
 using AuthService.Services;
 using Resend;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
