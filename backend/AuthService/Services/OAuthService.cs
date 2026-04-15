@@ -60,10 +60,17 @@ namespace AuthService.Services
                             {
                                 UserId = user.Id,
                                 Email = email.ToLowerInvariant(),
-                                IsPrimary = !await db.UserEmails.AnyAsync(e => e.UserId == user.Id && e.IsPrimary)
+                                IsPrimary = !await db.UserEmails.AnyAsync(e => e.UserId == user.Id && e.IsPrimary),
+                                VerifiedAt = DateTimeOffset.UtcNow
                             });
                         }
-                        else if (existingEmail.UserId != user.Id)
+                        else if (existingEmail.UserId == user.Id)
+                        {
+                            // Email already belongs to this user — mark as verified via OAuth
+                            if (existingEmail.VerifiedAt is null)
+                                existingEmail.VerifiedAt = DateTimeOffset.UtcNow;
+                        }
+                        else
                         {
                             var otherUser = await db.Users.FindAsync(existingEmail.UserId);
                             if (otherUser != null && !otherUser.IsDeleted)
@@ -105,7 +112,8 @@ namespace AuthService.Services
                             {
                                 UserId = user.Id,
                                 Email = email.ToLowerInvariant(),
-                                IsPrimary = true
+                                IsPrimary = true,
+                                VerifiedAt = DateTimeOffset.UtcNow
                             });
                         }
 
