@@ -27,7 +27,7 @@
           <button
             v-if="canUnlink"
             class="btn-unlink"
-            @click="$emit('unlinkProvider', p.provider)"
+            @click="$emit('unlinkProvider', p.provider!)"
             :disabled="loading"
             title="Unlink"
           >✕</button>
