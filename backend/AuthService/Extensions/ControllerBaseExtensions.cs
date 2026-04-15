@@ -43,6 +43,12 @@ namespace AuthService.Extensions
                 AuthError.UserNotFoundForMerge =>
                     controller.Unauthorized(new { message = message ?? "User not found." }),
 
+                AuthError.CannotUnlinkLastLoginMethod =>
+                    controller.BadRequest(new { message = message ?? "Cannot unlink the last login method." }),
+
+                AuthError.ProviderNotLinked =>
+                    controller.BadRequest(new { message = message ?? "Provider is not linked to this account." }),
+
                 _ => controller.BadRequest(new { message = message ?? "An error occurred." })
             };
         }

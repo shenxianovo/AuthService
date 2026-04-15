@@ -19,6 +19,7 @@
         @addPassword="handleAddPassword"
         @githubBind="handleGithubBind"
         @googleBind="handleGoogleBind"
+        @unlinkProvider="handleUnlinkProvider"
         @logout="handleLogout"
       />
 
@@ -159,13 +160,29 @@ const handleGoogleLogin = () => {
   const r = externalRedirect.value ?? currentPageUrl()
   window.location.href = api.googleLoginUrl(r)
 }
+const linkedProviders = computed(() =>
+  new Set((userInfo.value?.providers ?? []).map(p => p.provider?.toLowerCase()))
+)
+
 const handleGithubBind = () => {
+  if (linkedProviders.value.has('github')) return
   const t = authStore.state.tokens?.accessToken ?? ''
   window.location.href = api.githubBindUrl(currentPageUrl(), t)
 }
 const handleGoogleBind = () => {
+  if (linkedProviders.value.has('google')) return
   const t = authStore.state.tokens?.accessToken ?? ''
   window.location.href = api.googleBindUrl(currentPageUrl(), t)
+}
+
+async function handleUnlinkProvider(provider: string) {
+  resetMessages(); loading.value = true
+  try {
+    await api.unlinkProvider(provider)
+    successMsg.value = `${provider} account unlinked successfully!`
+    await fetchUserInfo()
+  } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to unlink provider' }
+  finally { loading.value = false }
 }
 
 function redirectToExternal(data: AuthResponse) {

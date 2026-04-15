@@ -55,7 +55,10 @@ import AuthCard from '@/components/AuthCard.vue'
 .badge-primary { background: #eef0f2; color: #555; }
 .badge-success { background: #e8f5e9; color: #4caf50; }
 .provider-list { display: flex; gap: 8px; flex-wrap: wrap; }
-.provider-chip { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f5f5f7; border-radius: 20px; font-size: 13px; font-weight: 500; color: #333; }
+.provider-chip { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 12px; background: #f5f5f7; border-radius: 20px; font-size: 13px; font-weight: 500; color: #333; }
+.btn-unlink { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; padding: 0; margin-left: 2px; border: none; background: transparent; border-radius: 50%; color: #aaa; font-size: 11px; cursor: pointer; line-height: 1; transition: background .15s, color .15s; }
+.btn-unlink:hover:not(:disabled) { background: #ff5555; color: #fff; }
+.btn-unlink:disabled { opacity: .4; cursor: not-allowed; }
 .provider-icon { width: 8px; height: 8px; border-radius: 50%; }
 .provider-icon.github { background: #24292e; }
 .provider-icon.google { background: #4285f4; }

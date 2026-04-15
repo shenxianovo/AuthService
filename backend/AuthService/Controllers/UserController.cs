@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using AuthService.DTOs.Auth;
+using AuthService.Entities;
 using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -45,6 +46,27 @@ namespace AuthService.Controllers
                 return NotFound();
 
             return Ok(userInfo);
+        }
+
+        [Authorize]
+        [HttpDelete("unlink-provider")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UnlinkProvider([FromBody] UnlinkProviderRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized();
+
+            if (!Enum.TryParse<AuthProviderType>(request.Provider, ignoreCase: true, out var providerType)
+                || providerType == AuthProviderType.Password)
+                return BadRequest(new { message = "Invalid provider." });
+
+            var result = await userService.UnlinkProviderAsync(userId, providerType);
+            return result.IsSuccess
+                ? Ok(new { message = $"{request.Provider} account unlinked successfully." })
+                : this.ToErrorResponse(result.Error, result.ErrorMessage);
         }
     }
 }

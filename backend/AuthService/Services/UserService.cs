@@ -1,3 +1,4 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
@@ -8,6 +9,7 @@ namespace AuthService.Services
     public interface IUserService
     {
         Task<UserInfoResponse?> GetUserInfoAsync(Guid userId);
+        Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider);
     }
 
     public class UserService(AppDbContext db) : IUserService
@@ -44,6 +46,28 @@ namespace AuthService.Services
                         LinkedAt = p.CreatedAt
                     }).ToList()
             };
+        }
+
+        public async Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider)
+        {
+            var authProvider = await db.AuthProviders
+                .FirstOrDefaultAsync(a => a.UserId == userId && a.Provider == provider);
+
+            if (authProvider is null)
+                return Result.Fail(AuthError.ProviderNotLinked);
+
+            // Check if this is the last login method
+            var hasPassword = await db.PasswordCredentials.AnyAsync(p => p.UserId == userId);
+            var providerCount = await db.AuthProviders
+                .CountAsync(a => a.UserId == userId && a.Provider != AuthProviderType.Password);
+
+            if (!hasPassword && providerCount <= 1)
+                return Result.Fail(AuthError.CannotUnlinkLastLoginMethod);
+
+            db.AuthProviders.Remove(authProvider);
+            await db.SaveChangesAsync();
+
+            return Result.Ok();
         }
     }
 }

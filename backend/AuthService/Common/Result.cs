@@ -78,5 +78,9 @@ namespace AuthService.Common
         InvalidRefreshToken,
         UserDeleted,
         UserNotFoundForMerge,
+
+        // 400 Bad Request – unlink
+        CannotUnlinkLastLoginMethod,
+        ProviderNotLinked,
     }
 }

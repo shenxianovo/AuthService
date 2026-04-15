@@ -159,3 +159,7 @@ export function githubBindUrl(redirectUrl: string, accessToken: string): string 
 export function googleBindUrl(redirectUrl: string, accessToken: string): string {
   return `${API_BASE}/google/login?redirectUrl=${encodeURIComponent(redirectUrl)}&token=${encodeURIComponent(accessToken)}`
 }
+
+export async function unlinkProvider(provider: string): Promise<void> {
+  await userClient.unlinkProvider({ provider } as any)
+}
