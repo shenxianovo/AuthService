@@ -1,5 +1,4 @@
 import { reactive, readonly, computed } from 'vue'
-import type { TokenStore } from '@/api/AuthClientBase'
 
 export interface AuthTokens {
   accessToken: string
@@ -10,12 +9,10 @@ export interface AuthTokens {
 
 interface AuthState {
   tokens: AuthTokens | null
-  isLoggingOut: boolean
 }
 
 const state = reactive<AuthState>({
   tokens: _loadFromStorage(),
-  isLoggingOut: false,
 })
 
 function _loadFromStorage(): AuthTokens | null {
@@ -26,7 +23,6 @@ function _loadFromStorage(): AuthTokens | null {
 
   if (accessToken && refreshToken && expiresAtStr && userId) {
     const expiresAt = new Date(expiresAtStr)
-    // Don't restore if already expired
     if (expiresAt > new Date()) {
       return { accessToken, refreshToken, expiresAt, userId }
     }
@@ -62,18 +58,5 @@ export const authStore = {
   clearTokens() {
     state.tokens = null
     _clearStorage()
-  },
-
-  /** TokenStore interface for AuthClientBase */
-  asTokenStore(): TokenStore {
-    return {
-      getAccessToken: () => state.tokens?.accessToken ?? null,
-      getRefreshToken: () => state.tokens?.refreshToken ?? null,
-      setTokens: (accessToken, refreshToken, expiresAt) => {
-        const userId = state.tokens?.userId ?? ''
-        authStore.setTokens(accessToken, refreshToken, expiresAt, userId)
-      },
-      clearTokens: () => authStore.clearTokens(),
-    }
   },
 }
