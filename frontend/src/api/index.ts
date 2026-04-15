@@ -11,6 +11,7 @@ import {
   PasswordAuthClient,
   SessionClient,
   UserClient,
+  VerifyEmailRequest,
 } from './client'
 
 export type {
@@ -111,13 +112,22 @@ const authHttp = {
 
 const exchangeClient = new ExchangeClient(CLIENT_BASE)
 const passwordClient = new PasswordAuthClient(CLIENT_BASE)
+const authPasswordClient = new PasswordAuthClient(CLIENT_BASE, authHttp)
 const sessionClient = new SessionClient(CLIENT_BASE, authHttp)
 const userClient = new UserClient(CLIENT_BASE, authHttp)
 
 // ---------- public API ----------
 
-export async function register(displayName: string, email: string, password: string): Promise<void> {
-  await passwordClient.register({ displayName, email, password } as any)
+export async function register(displayName: string, email: string, password: string): Promise<AuthResponse> {
+  return passwordClient.register({ displayName, email, password } as any)
+}
+
+export async function sendVerificationCode(): Promise<void> {
+  await authPasswordClient.sendVerificationCode()
+}
+
+export async function verifyEmail(code: string): Promise<void> {
+  await authPasswordClient.verifyEmail(new VerifyEmailRequest({ code }))
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
