@@ -5,13 +5,13 @@
       <p v-if="externalRedirect" class="subtitle">
         Sign in to continue to <strong>{{ externalRedirectHost }}</strong>
       </p>
-      <p v-else-if="!isAuthenticated" class="subtitle">Sign in to your account</p>
+      <p v-else-if="appState !== 'profile'" class="subtitle">Sign in to your account</p>
     </div>
 
     <div class="auth-content">
-      <!-- Authenticated -->
+      <!-- Profile -->
       <ProfileView
-        v-if="isAuthenticated"
+        v-if="appState === 'profile'"
         :userInfo="userInfo"
         :userId="authStore.state.tokens?.userId ?? ''"
         v-model:newPassword="addPasswordField"
@@ -20,24 +20,27 @@
         @githubBind="handleGithubBind"
         @googleBind="handleGoogleBind"
         @unlinkProvider="handleUnlinkProvider"
+        @verifyEmail="handleVerifyEmailFromProfile"
         @logout="handleLogout"
       />
 
-      <!-- Not authenticated -->
+      <!-- Email verification -->
+      <EmailVerificationView
+        v-else-if="appState === 'email-verify'"
+        :email="pendingEmail"
+        :loading="loading"
+        :error="error ?? ''"
+        @verify="handleVerifyEmail"
+        @resend="handleResendCode"
+      />
+
+      <!-- Login / Register -->
       <template v-else>
-        <div v-if="mode !== 'email-verify'" class="tabs">
-          <button :class="{ active: mode === 'login' }" @click="mode = 'login'">Sign in</button>
-          <button :class="{ active: mode === 'register' }" @click="mode = 'register'">Sign up</button>
+        <div class="tabs">
+          <button :class="{ active: appState === 'login' }" @click="authStore.transition('login')">Sign in</button>
+          <button :class="{ active: appState === 'register' }" @click="authStore.transition('register')">Sign up</button>
         </div>
-        <EmailVerificationView
-          v-if="mode === 'email-verify'"
-          :email="pendingEmail"
-          :loading="loading"
-          :error="error ?? ''"
-          @verify="handleVerifyEmail"
-          @resend="handleResendCode"
-        />
-        <div v-if="mode !== 'email-verify'" class="oauth-buttons">
+        <div class="oauth-buttons">
           <button class="btn btn-github" @click="handleGithubLogin" :disabled="loading">
             <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
             Continue with GitHub
@@ -47,9 +50,9 @@
             Continue with Google
           </button>
         </div>
-        <div v-if="mode !== 'email-verify'" class="oauth-divider"><span>or</span></div>
+        <div class="oauth-divider"><span>or</span></div>
         <RegisterForm
-          v-if="mode === 'register'"
+          v-if="appState === 'register'"
           v-model:displayName="registerForm.displayName"
           v-model:email="registerForm.email"
           v-model:password="registerForm.password"
@@ -57,7 +60,7 @@
           @submit="handleRegister"
         />
         <LoginForm
-          v-if="mode === 'login'"
+          v-if="appState === 'login'"
           v-model:email="loginForm.email"
           v-model:password="loginForm.password"
           :loading="loading"
@@ -65,7 +68,7 @@
         />
       </template>
 
-      <div v-if="error && mode !== 'email-verify'" class="message error">{{ error }}</div>
+      <div v-if="error && appState !== 'email-verify'" class="message error">{{ error }}</div>
       <div v-if="successMsg" class="message success">{{ successMsg }}</div>
     </div>
   </div>
@@ -81,7 +84,8 @@ import RegisterForm from './RegisterForm.vue'
 import ProfileView from './ProfileView.vue'
 import EmailVerificationView from './EmailVerificationView.vue'
 
-const mode = ref<'login' | 'register' | 'email-verify'>('login')
+const appState = authStore.appState
+
 const loading = ref(false)
 const error = ref<string | null>(null)
 const successMsg = ref<string | null>(null)
@@ -92,7 +96,6 @@ const loginForm = ref({ email: '', password: '' })
 const addPasswordField = ref('')
 const pendingEmail = ref('')
 
-const isAuthenticated = computed(() => authStore.isAuthenticated.value)
 const externalRedirectHost = computed(() => {
   try { return externalRedirect.value ? new URL(externalRedirect.value).host : '' }
   catch { return externalRedirect.value ?? '' }
@@ -124,12 +127,10 @@ async function handleRegister() {
       registerForm.value.email,
       registerForm.value.password,
     )
-    // Silently sign in with the returned tokens
     applyAuthResponse(data)
     pendingEmail.value = registerForm.value.email
-    // Send verification code immediately after registration
     await api.sendVerificationCode()
-    mode.value = 'email-verify'
+    authStore.transition('email-verify')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Registration failed' }
   finally { loading.value = false }
 }
@@ -139,7 +140,7 @@ async function handleVerifyEmail(code: string) {
   try {
     await api.verifyEmail(code)
     await fetchUserInfo()
-    // isAuthenticated becomes true → ProfileView will render automatically
+    authStore.transition('profile')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Verification failed' }
   finally { loading.value = false }
 }
@@ -151,6 +152,17 @@ async function handleResendCode() {
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to resend code' }
 }
 
+async function handleVerifyEmailFromProfile() {
+  resetMessages(); loading.value = true
+  try {
+    // pendingEmail from userInfo primary email
+    pendingEmail.value = userInfo.value?.emails?.find(e => e.isPrimary)?.email ?? ''
+    await api.sendVerificationCode()
+    authStore.transition('email-verify')
+  } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to send verification code' }
+  finally { loading.value = false }
+}
+
 async function handleLogin() {
   resetMessages(); loading.value = true
   try {
@@ -158,6 +170,7 @@ async function handleLogin() {
     applyAuthResponse(data)
     if (externalRedirect.value) { redirectToExternal(data); return }
     await fetchUserInfo()
+    authStore.transition('profile')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Login failed' }
   finally { loading.value = false }
 }
@@ -165,6 +178,7 @@ async function handleLogin() {
 async function handleLogout() {
   await api.logout()
   authStore.clearTokens(); userInfo.value = null; resetMessages()
+  authStore.transition('login')
   window.history.replaceState({}, document.title, window.location.pathname)
 }
 
@@ -179,7 +193,6 @@ async function handleAddPassword() {
   finally { loading.value = false }
 }
 
-// OAuth redirects
 const currentPageUrl = () => window.location.origin + window.location.pathname
 
 const handleGithubLogin = () => {
@@ -237,12 +250,13 @@ onMounted(async () => {
       applyAuthResponse(data)
       successMsg.value = 'OAuth login successful!'
       await fetchUserInfo()
+      authStore.transition('profile')
     } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'OAuth login failed' }
   } else if (oauthError) {
     error.value = `OAuth login failed: ${oauthError}`
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
-  if (isAuthenticated.value) await fetchUserInfo()
+  if (appState.value === 'profile') await fetchUserInfo()
 })
 </script>

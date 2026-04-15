@@ -15,6 +15,12 @@
         <div class="badge-group">
           <span v-if="email.isPrimary" class="badge badge-primary">Primary</span>
           <span v-if="email.isVerified" class="badge badge-success">Verified</span>
+          <button
+            v-else
+            class="btn-verify-email"
+            @click="$emit('verifyEmail')"
+            :disabled="loading"
+          >Verify</button>
         </div>
       </div>
     </div>
@@ -83,6 +89,7 @@ defineEmits<{
   githubBind: []
   googleBind: []
   unlinkProvider: [provider: string]
+  verifyEmail: []
   logout: []
   'update:newPassword': [value: string]
 }>()
