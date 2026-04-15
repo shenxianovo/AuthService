@@ -10,4 +10,10 @@ namespace AuthService.Exceptions
     /// Maps to HTTP 409 Conflict.
     /// </summary>
     public class ConflictException(string message) : Exception(message);
+
+    /// <summary>
+    /// Represents an authentication failure or missing/invalid credentials.
+    /// Maps to HTTP 401 Unauthorized.
+    /// </summary>
+    public class UnauthorizedException(string message) : Exception(message);
 }

@@ -35,6 +35,11 @@ namespace AuthService.Middleware
                 logger.LogInformation(ex, "Business rule violation: {Message}", ex.Message);
                 await WriteErrorAsync(context, StatusCodes.Status400BadRequest, ex.Message);
             }
+            catch (UnauthorizedException ex)
+            {
+                logger.LogInformation(ex, "Unauthorized: {Message}", ex.Message);
+                await WriteErrorAsync(context, StatusCodes.Status401Unauthorized, ex.Message);
+            }
             catch (UnauthorizedAccessException ex)
             {
                 logger.LogInformation(ex, "Unauthorized: {Message}", ex.Message);

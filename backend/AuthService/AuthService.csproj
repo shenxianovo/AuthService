@@ -19,6 +19,7 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.4" />
 		<PackageReference Include="NSwag.AspNetCore" Version="14.7.0" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
+		<PackageReference Include="Resend" Version="0.4.0" />
 	</ItemGroup>
 
 </Project>

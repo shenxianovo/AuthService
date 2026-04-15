@@ -2,7 +2,9 @@ using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Configuration;
 using AuthService.Middleware;
+using AuthService.Options;
 using AuthService.Services;
+using Resend;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -73,6 +75,18 @@ builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
 builder.Services.AddSingleton<IOAuthSecurityService, OAuthSecurityService>();
 builder.Services.AddHttpClient<IGithubAuthService, GithubAuthService>();
 builder.Services.AddHttpClient<IGoogleAuthService, GoogleAuthService>();
+
+// Resend Email
+builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
+builder.Services.AddOptions();
+builder.Services.AddHttpClient<ResendClient>();
+builder.Services.Configure<ResendClientOptions>(o =>
+{
+    o.ApiToken = builder.Configuration["Resend:ApiKey"] ?? string.Empty;
+});
+builder.Services.AddTransient<IResend, ResendClient>();
+builder.Services.AddScoped<IEmailService, ResendEmailService>();
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
