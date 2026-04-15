@@ -98,6 +98,8 @@ const registerForm = ref({ displayName: '', email: '', password: '' })
 const loginForm = ref({ email: '', password: '' })
 const addPasswordField = ref('')
 const pendingEmail = ref('')
+/** non-null when verifying a non-primary email; used to route send-code and verify calls */
+const pendingEmailId = ref<string | null>(null)
 
 const externalRedirectHost = computed(() => {
   try { return externalRedirect.value ? new URL(externalRedirect.value).host : '' }
@@ -141,7 +143,8 @@ async function handleRegister() {
 async function handleVerifyEmail(code: string) {
   resetMessages(); loading.value = true
   try {
-    await api.verifyEmail(code)
+    await api.verifyEmail(code, pendingEmailId.value ?? undefined)
+    pendingEmailId.value = null
     await fetchUserInfo()
     authStore.transition('profile')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Verification failed' }
@@ -151,15 +154,15 @@ async function handleVerifyEmail(code: string) {
 async function handleResendCode() {
   resetMessages()
   try {
-    await api.sendVerificationCode()
+    await api.sendVerificationCode(pendingEmailId.value ?? undefined)
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to resend code' }
 }
 
 async function handleVerifyEmailFromProfile() {
   resetMessages(); loading.value = true
   try {
-    // pendingEmail from userInfo primary email
     pendingEmail.value = userInfo.value?.emails?.find(e => e.isPrimary)?.email ?? ''
+    pendingEmailId.value = null  // primary email
     await api.sendVerificationCode()
     authStore.transition('email-verify')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to send verification code' }
@@ -235,8 +238,10 @@ async function handleAddEmail(email: string) {
   resetMessages(); loading.value = true
   try {
     await api.addEmail(email)
-    successMsg.value = 'Verification code sent to new email.'
+    pendingEmail.value = email
+    pendingEmailId.value = email  // non-primary: route send-code and verify to this specific email
     await fetchUserInfo()
+    authStore.transition('email-verify')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Failed to add email' }
   finally { loading.value = false }
 }

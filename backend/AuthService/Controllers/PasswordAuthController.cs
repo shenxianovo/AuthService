@@ -4,6 +4,7 @@ using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace AuthService.Controllers
@@ -43,10 +44,13 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> SendVerificationCode()
+        public async Task<IActionResult> SendVerificationCode([FromQuery] string? email = null)
         {
+            if (email is not null && !IsValidEmail(email))
+                return BadRequest(new { message = "邮箱格式不正确。" });
+
             var userId = GetCurrentUserId();
-            await emailVerificationService.SendVerificationCodeAsync(userId);
+            await emailVerificationService.SendVerificationCodeAsync(userId, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
             return Ok(new { message = "验证码已发送。" });
         }
 
@@ -55,10 +59,13 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, [FromQuery] string? email = null)
         {
+            if (email is not null && !IsValidEmail(email))
+                return BadRequest(new { message = "邮箱格式不正确。" });
+
             var userId = GetCurrentUserId();
-            await emailVerificationService.VerifyCodeAsync(userId, request.Code);
+            await emailVerificationService.VerifyCodeAsync(userId, request.Code, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
             return Ok(new { message = "邮箱验证成功。" });
         }
 
@@ -80,6 +87,9 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> RemoveEmail(string email)
         {
+            if (!IsValidEmail(email))
+                return BadRequest(new { message = "邮箱格式不正确。" });
+
             var userId = GetCurrentUserId();
             await emailManagementService.RemoveEmailAsync(userId, email);
             return Ok(new { message = "邮箱已删除。" });
@@ -91,6 +101,9 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SetPrimaryEmail(string email)
         {
+            if (!IsValidEmail(email))
+                return BadRequest(new { message = "邮箱格式不正确。" });
+
             var userId = GetCurrentUserId();
             await emailManagementService.SetPrimaryEmailAsync(userId, email);
             return Ok(new { message = "主邮箱已更新。" });
@@ -103,5 +116,8 @@ namespace AuthService.Controllers
                 ?? throw new UnauthorizedException("未登录或令牌无效。");
             return Guid.Parse(sub);
         }
+
+        private static bool IsValidEmail(string email)
+            => new EmailAddressAttribute().IsValid(email);
     }
 }

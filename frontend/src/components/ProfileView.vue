@@ -51,6 +51,7 @@
           :disabled="loading || !newEmailInput.trim()"
         >Add</button>
       </div>
+      <p v-if="emailFormatError" class="error-text">{{ emailFormatError }}</p>
     </div>
     <div class="detail-group">
       <div class="detail-label">Linked Accounts</div>
@@ -127,9 +128,17 @@ const emit = defineEmits<{
 
 const newEmailInput = ref('')
 
+const emailFormatError = ref('')
+
 function submitAddEmail() {
-  if (!newEmailInput.value.trim()) return
-  emit('addEmail', newEmailInput.value.trim())
+  const email = newEmailInput.value.trim()
+  if (!email) return
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    emailFormatError.value = '请输入有效的邮箱地址'
+    return
+  }
+  emailFormatError.value = ''
+  emit('addEmail', email)
   newEmailInput.value = ''
 }
 

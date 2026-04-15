@@ -31,7 +31,7 @@ namespace AuthService.Services
             db.Set<UserEmail>().Add(userEmail);
             await db.SaveChangesAsync();
 
-            await emailVerificationService.SendVerificationCodeByEmailIdAsync(userId, userEmail.Id);
+            await emailVerificationService.SendVerificationCodeAsync(userId, EmailTarget.ById(userEmail.Id));
         }
 
         public async Task RemoveEmailAsync(Guid userId, string email)

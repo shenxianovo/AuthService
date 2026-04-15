@@ -123,12 +123,12 @@ export async function register(displayName: string, email: string, password: str
   return passwordClient.register({ displayName, email, password } as any)
 }
 
-export async function sendVerificationCode(): Promise<void> {
-  await authPasswordClient.sendVerificationCode()
+export async function sendVerificationCode(email?: string): Promise<void> {
+  await authPasswordClient.sendVerificationCode(email)
 }
 
-export async function verifyEmail(code: string): Promise<void> {
-  await authPasswordClient.verifyEmail(new VerifyEmailRequest({ code }))
+export async function verifyEmail(code: string, email?: string): Promise<void> {
+  await authPasswordClient.verifyEmail(email, new VerifyEmailRequest({ code }))
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {

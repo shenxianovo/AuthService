@@ -322,9 +322,9 @@ export interface IPasswordAuthClient {
 
     login(request: LoginRequest): Promise<AuthResponse>;
 
-    sendVerificationCode(): Promise<void>;
+    sendVerificationCode(email: string | null | undefined): Promise<void>;
 
-    verifyEmail(request: VerifyEmailRequest): Promise<void>;
+    verifyEmail(email: string | null | undefined, request: VerifyEmailRequest): Promise<void>;
 
     addEmail(request: AddEmailRequest): Promise<void>;
 
@@ -433,8 +433,10 @@ export class PasswordAuthClient implements IPasswordAuthClient {
         return Promise.resolve<AuthResponse>(null as any);
     }
 
-    sendVerificationCode(): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/auth/email/send-code";
+    sendVerificationCode(email: string | null | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/email/send-code?";
+        if (email !== undefined && email !== null)
+            url_ += "email=" + encodeURIComponent("" + email) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -477,8 +479,10 @@ export class PasswordAuthClient implements IPasswordAuthClient {
         return Promise.resolve<void>(null as any);
     }
 
-    verifyEmail(request: VerifyEmailRequest): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/auth/email/verify";
+    verifyEmail(email: string | null | undefined, request: VerifyEmailRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/email/verify?";
+        if (email !== undefined && email !== null)
+            url_ += "email=" + encodeURIComponent("" + email) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(request);
@@ -1187,7 +1191,7 @@ export interface IVerifyEmailRequest {
 }
 
 export class AddEmailRequest implements IAddEmailRequest {
-    email?: string;
+    email!: string;
 
     constructor(data?: IAddEmailRequest) {
         if (data) {
@@ -1219,7 +1223,7 @@ export class AddEmailRequest implements IAddEmailRequest {
 }
 
 export interface IAddEmailRequest {
-    email?: string;
+    email: string;
 }
 
 export class RefreshRequest implements IRefreshRequest {
