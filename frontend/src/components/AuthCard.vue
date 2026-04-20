@@ -1,35 +1,39 @@
 <template>
-  <div class="auth-card">
+  <!-- Dashboard mode: no card wrapper -->
+  <template v-if="appState === 'profile'">
+    <ProfileView
+      :userInfo="userInfo"
+      :userId="authStore.state.tokens?.userId ?? ''"
+      v-model:newPassword="addPasswordField"
+      :loading="loading"
+      @addPassword="handleAddPassword"
+      @githubBind="handleGithubBind"
+      @googleBind="handleGoogleBind"
+      @unlinkProvider="handleUnlinkProvider"
+      @verifyEmail="handleVerifyEmailFromProfile"
+      @addEmail="handleAddEmail"
+      @removeEmail="handleRemoveEmail"
+      @setPrimaryEmail="handleSetPrimaryEmail"
+      @logout="handleLogout"
+    />
+    <div v-if="error" class="dashboard-toast error">{{ error }}</div>
+    <div v-if="successMsg" class="dashboard-toast success">{{ successMsg }}</div>
+  </template>
+
+  <!-- Card mode: login / register / email-verify -->
+  <div v-else class="auth-card">
     <div class="header">
       <h1>喵~</h1>
       <p v-if="externalRedirect" class="subtitle">
         Sign in to continue to <strong>{{ externalRedirectHost }}</strong>
       </p>
-      <p v-else-if="appState !== 'profile'" class="subtitle">Sign in to your account</p>
+      <p v-else class="subtitle">Sign in to your account</p>
     </div>
 
     <div class="auth-content">
-      <!-- Profile -->
-      <ProfileView
-        v-if="appState === 'profile'"
-        :userInfo="userInfo"
-        :userId="authStore.state.tokens?.userId ?? ''"
-        v-model:newPassword="addPasswordField"
-        :loading="loading"
-        @addPassword="handleAddPassword"
-        @githubBind="handleGithubBind"
-        @googleBind="handleGoogleBind"
-        @unlinkProvider="handleUnlinkProvider"
-        @verifyEmail="handleVerifyEmailFromProfile"
-        @addEmail="handleAddEmail"
-        @removeEmail="handleRemoveEmail"
-        @setPrimaryEmail="handleSetPrimaryEmail"
-        @logout="handleLogout"
-      />
-
       <!-- Email verification -->
       <EmailVerificationView
-        v-else-if="appState === 'email-verify'"
+        v-if="appState === 'email-verify'"
         :email="pendingEmail"
         :loading="loading"
         :error="error ?? ''"
@@ -296,3 +300,36 @@ onMounted(async () => {
   if (appState.value === 'profile') await fetchUserInfo()
 })
 </script>
+
+<style scoped>
+.dashboard-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0,0,0,.12);
+  animation: toast-in .3s ease;
+}
+
+.dashboard-toast.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.dashboard-toast.success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+</style>
