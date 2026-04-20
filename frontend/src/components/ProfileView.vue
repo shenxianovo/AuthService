@@ -4,7 +4,7 @@
     <header class="topbar">
       <div class="topbar-inner">
         <div class="topbar-brand">
-          <span class="brand-icon">🐱</span>
+          <span class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/><path d="M3.5 14.5C3.5 9 7 8 12 8s8.5 1 8.5 6.5c0 4-3.5 7.5-8.5 7.5s-8.5-3.5-8.5-7.5z"/><path d="M8 14v.5"/><path d="M16 14v.5"/></svg></span>
           <span class="brand-text">AuthService</span>
         </div>
         <div class="topbar-user">
@@ -39,7 +39,7 @@
         <!-- Email Management Card -->
         <section class="card card-emails">
           <div class="card-header">
-            <h3>📧 Email Addresses</h3>
+            <h3><svg class="section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg> Email Addresses</h3>
           </div>
           <div class="card-body" v-if="userInfo">
             <div class="email-list">
@@ -94,7 +94,7 @@
         <!-- Linked Accounts Card -->
         <section class="card card-providers">
           <div class="card-header">
-            <h3>🔗 Linked Accounts</h3>
+            <h3><svg class="section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Linked Accounts</h3>
           </div>
           <div class="card-body" v-if="userInfo">
             <div v-if="userInfo.providers && userInfo.providers.length" class="provider-grid">
@@ -132,7 +132,7 @@
         <!-- Security Settings Card -->
         <section class="card card-security">
           <div class="card-header">
-            <h3>🔒 Security</h3>
+            <h3><svg class="section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Security</h3>
           </div>
           <div class="card-body" v-if="userInfo">
             <div class="security-item">
@@ -262,7 +262,11 @@ const canUnlink = computed(() => {
   color: #1a1a2e;
 }
 
-.brand-icon { font-size: 24px; }
+.brand-icon {
+  display: flex;
+  align-items: center;
+  color: #1a1a2e;
+}
 
 .topbar-user {
   display: flex;
@@ -274,7 +278,7 @@ const canUnlink = computed(() => {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1a1a2e;
   color: #fff;
   display: flex;
   align-items: center;
@@ -343,6 +347,14 @@ const canUnlink = computed(() => {
   font-weight: 700;
   color: #1a1a2e;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-icon {
+  flex-shrink: 0;
+  color: #555;
 }
 
 .card-body {
@@ -363,7 +375,7 @@ const canUnlink = computed(() => {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1a1a2e;
   color: #fff;
   display: flex;
   align-items: center;
@@ -421,10 +433,11 @@ const canUnlink = computed(() => {
 
 .add-email-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
 }
 
-.add-email-row .input { flex: 1; }
+.add-email-row .input { flex: 1; min-width: 0; }
 
 .error-text {
   color: #dc3545;
@@ -518,24 +531,25 @@ const canUnlink = computed(() => {
 
 .password-form {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  align-items: center;
 }
 
-.password-form .input { flex: 1; }
+.password-form .input { flex: 1; min-width: 0; }
 
 .input {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border: 1.5px solid #e0e0e0;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 13px;
   transition: border-color .2s, box-shadow .2s;
   outline: none;
   background: #fff;
 }
 
 .input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, .1);
+  border-color: #333;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .06);
 }
 
 .btn {
@@ -568,8 +582,10 @@ const canUnlink = computed(() => {
 }
 
 .btn-sm {
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 6px 14px;
+  font-size: 12px;
+  width: auto;
+  flex-shrink: 0;
 }
 
 .btn-github { background: #24292e; color: #fff; }
