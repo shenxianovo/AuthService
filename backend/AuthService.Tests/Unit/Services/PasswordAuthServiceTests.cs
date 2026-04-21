@@ -1,9 +1,9 @@
 using AuthService.Common;
-using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
 using AuthService.Configuration;
 using AuthService.Services;
+using AuthService.Tests.Fixtures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -11,38 +11,29 @@ using Moq;
 
 namespace AuthService.Tests.Unit.Services
 {
-    public class PasswordAuthServiceTests : IDisposable
+    public class PasswordAuthServiceTests : DbTestBase
     {
-        private readonly AppDbContext _db;
         private readonly Mock<IJwtService> _jwtServiceMock;
-        private readonly IOptions<JwtOptions> _jwtOptions;
         private readonly PasswordAuthService _sut;
 
         public PasswordAuthServiceTests()
         {
-            var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                .Options;
-            _db = new AppDbContext(dbOptions);
-
             _jwtServiceMock = new Mock<IJwtService>();
             _jwtServiceMock
                 .Setup(j => j.GenerateAccessToken(It.IsAny<Guid>(), It.IsAny<Guid>()))
                 .Returns("fake-access-token");
 
-            _jwtOptions = Options.Create(new JwtOptions
+            var jwtOptions = Options.Create(new JwtOptions
             {
                 AccessTokenExpirationMinutes = 15,
                 RefreshTokenExpirationDays = 30,
                 SessionExpirationDays = 30,
             });
 
-            var sessionService = new SessionService(_db, _jwtServiceMock.Object, _jwtOptions);
+            var sessionService = new SessionService(Db, _jwtServiceMock.Object, jwtOptions);
             var passwordHasher = new PasswordHasher<User>();
-            _sut = new PasswordAuthService(_db, sessionService, passwordHasher);
+            _sut = new PasswordAuthService(Db, sessionService, passwordHasher);
         }
-
-        public void Dispose() => _db.Dispose();
 
         // --- Register ---
 
@@ -63,30 +54,30 @@ namespace AuthService.Tests.Unit.Services
             Assert.NotEmpty(result.Value.RefreshToken);
             Assert.NotEqual(Guid.Empty, result.Value.UserId);
 
-            var user = await _db.Users.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var user = await Db.Users.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(user);
             Assert.Equal("Test User", user.DisplayName);
 
-            var email = await _db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var email = await Db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(email);
             Assert.Equal("test@example.com", email.Email);
             Assert.True(email.IsPrimary);
 
-            var credential = await _db.PasswordCredentials.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var credential = await Db.PasswordCredentials.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(credential);
             Assert.NotEmpty(credential.PasswordHash);
             Assert.NotEqual("SecurePass123", credential.PasswordHash);
 
-            var provider = await _db.AuthProviders.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var provider = await Db.AuthProviders.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(provider);
             Assert.Equal(AuthProviderType.Password, provider.Provider);
 
-            var session = await _db.Sessions.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var session = await Db.Sessions.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(session);
             Assert.Equal("127.0.0.1", session.IpAddress);
             Assert.Equal("TestAgent", session.Device);
 
-            var refreshToken = await _db.RefreshTokens.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var refreshToken = await Db.RefreshTokens.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(refreshToken);
             Assert.False(refreshToken.Revoked);
         }
@@ -103,7 +94,7 @@ namespace AuthService.Tests.Unit.Services
 
             await _sut.RegisterAsync(request, "127.0.0.1", "TestAgent");
 
-            var email = await _db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            var email = await Db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(email);
             Assert.Equal("test@example.com", email.Email);
         }
@@ -149,7 +140,7 @@ namespace AuthService.Tests.Unit.Services
             Assert.Equal("fake-access-token", result.Value.AccessToken);
             Assert.NotEmpty(result.Value.RefreshToken);
 
-            var sessions = await _db.Sessions.CountAsync(TestContext.Current.CancellationToken);
+            var sessions = await Db.Sessions.CountAsync(TestContext.Current.CancellationToken);
             Assert.Equal(2, sessions);
         }
 
@@ -200,9 +191,9 @@ namespace AuthService.Tests.Unit.Services
             };
             var registerResult = await _sut.RegisterAsync(registerRequest, "127.0.0.1", "TestAgent");
 
-            var user = await _db.Users.FindAsync([registerResult.Value.UserId], TestContext.Current.CancellationToken);
+            var user = await Db.Users.FindAsync([registerResult.Value.UserId], TestContext.Current.CancellationToken);
             user!.IsDeleted = true;
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var loginRequest = new LoginRequest
             {

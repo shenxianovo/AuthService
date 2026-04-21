@@ -1,26 +1,19 @@
 using AuthService.Common;
-using AuthService.Data;
 using AuthService.Entities;
 using AuthService.Services;
+using AuthService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Tests.Unit.Services
 {
-    public class UserServiceTests : IDisposable
+    public class UserServiceTests : DbTestBase
     {
-        private readonly AppDbContext _db;
         private readonly UserService _sut;
 
         public UserServiceTests()
         {
-            var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                .Options;
-            _db = new AppDbContext(dbOptions);
-            _sut = new UserService(_db);
+            _sut = new UserService(Db);
         }
-
-        public void Dispose() => _db.Dispose();
 
         // ==================== GetUserInfoAsync ====================
 
@@ -28,32 +21,32 @@ namespace AuthService.Tests.Unit.Services
         public async Task GetUserInfo_WithValidUser_ReturnsUserInfo()
         {
             var user = new User { DisplayName = "TestUser" };
-            _db.Users.Add(user);
-            _db.UserEmails.Add(new UserEmail
+            Db.Users.Add(user);
+            Db.UserEmails.Add(new UserEmail
             {
                 UserId = user.Id,
                 Email = "test@example.com",
                 IsPrimary = true,
                 VerifiedAt = DateTimeOffset.UtcNow,
             });
-            _db.AuthProviders.Add(new AuthProvider
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Password,
                 ProviderUserId = user.Id.ToString(),
             });
-            _db.AuthProviders.Add(new AuthProvider
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Github,
                 ProviderUserId = "github-123",
             });
-            _db.PasswordCredentials.Add(new PasswordCredential
+            Db.PasswordCredentials.Add(new PasswordCredential
             {
                 UserId = user.Id,
                 PasswordHash = "hashed",
             });
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.GetUserInfoAsync(user.Id);
 
@@ -75,22 +68,22 @@ namespace AuthService.Tests.Unit.Services
         public async Task GetUserInfo_WithMultipleEmails_ReturnsAll()
         {
             var user = new User { DisplayName = "MultiEmail" };
-            _db.Users.Add(user);
-            _db.UserEmails.Add(new UserEmail
+            Db.Users.Add(user);
+            Db.UserEmails.Add(new UserEmail
             {
                 UserId = user.Id,
                 Email = "primary@example.com",
                 IsPrimary = true,
                 VerifiedAt = DateTimeOffset.UtcNow,
             });
-            _db.UserEmails.Add(new UserEmail
+            Db.UserEmails.Add(new UserEmail
             {
                 UserId = user.Id,
                 Email = "secondary@example.com",
                 IsPrimary = false,
                 VerifiedAt = null,
             });
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.GetUserInfoAsync(user.Id);
 
@@ -104,14 +97,14 @@ namespace AuthService.Tests.Unit.Services
         public async Task GetUserInfo_WithoutPassword_HasPasswordIsFalse()
         {
             var user = new User { DisplayName = "OAuthOnly" };
-            _db.Users.Add(user);
-            _db.AuthProviders.Add(new AuthProvider
+            Db.Users.Add(user);
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Google,
                 ProviderUserId = "google-123",
             });
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.GetUserInfoAsync(user.Id);
 
@@ -123,8 +116,8 @@ namespace AuthService.Tests.Unit.Services
         public async Task GetUserInfo_WithDeletedUser_ReturnsNull()
         {
             var user = new User { DisplayName = "Deleted", IsDeleted = true };
-            _db.Users.Add(user);
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.GetUserInfoAsync(user.Id);
 
@@ -145,26 +138,26 @@ namespace AuthService.Tests.Unit.Services
         public async Task UnlinkProvider_WithValidProvider_Succeeds()
         {
             var user = new User { DisplayName = "Test" };
-            _db.Users.Add(user);
-            _db.AuthProviders.Add(new AuthProvider
+            Db.Users.Add(user);
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Github,
                 ProviderUserId = "github-123",
             });
-            _db.AuthProviders.Add(new AuthProvider
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Google,
                 ProviderUserId = "google-456",
             });
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.UnlinkProviderAsync(user.Id, AuthProviderType.Github);
 
             Assert.True(result.IsSuccess);
 
-            var remaining = await _db.AuthProviders
+            var remaining = await Db.AuthProviders
                 .Where(p => p.UserId == user.Id)
                 .ToListAsync(TestContext.Current.CancellationToken);
             Assert.Single(remaining);
@@ -175,19 +168,19 @@ namespace AuthService.Tests.Unit.Services
         public async Task UnlinkProvider_WithPasswordAsBackup_Succeeds()
         {
             var user = new User { DisplayName = "Test" };
-            _db.Users.Add(user);
-            _db.AuthProviders.Add(new AuthProvider
+            Db.Users.Add(user);
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Github,
                 ProviderUserId = "github-123",
             });
-            _db.PasswordCredentials.Add(new PasswordCredential
+            Db.PasswordCredentials.Add(new PasswordCredential
             {
                 UserId = user.Id,
                 PasswordHash = "hashed",
             });
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             // Even though this is the only OAuth provider, user has a password so it's fine
             var result = await _sut.UnlinkProviderAsync(user.Id, AuthProviderType.Github);
@@ -199,15 +192,15 @@ namespace AuthService.Tests.Unit.Services
         public async Task UnlinkProvider_LastLoginMethod_ReturnsCannotUnlink()
         {
             var user = new User { DisplayName = "Test" };
-            _db.Users.Add(user);
-            _db.AuthProviders.Add(new AuthProvider
+            Db.Users.Add(user);
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Github,
                 ProviderUserId = "github-123",
             });
-            // No password, only one provider â†’ cannot unlink
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            // No password, only one provider â†?cannot unlink
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.UnlinkProviderAsync(user.Id, AuthProviderType.Github);
 
@@ -219,14 +212,14 @@ namespace AuthService.Tests.Unit.Services
         public async Task UnlinkProvider_NotLinked_ReturnsProviderNotLinked()
         {
             var user = new User { DisplayName = "Test" };
-            _db.Users.Add(user);
-            _db.AuthProviders.Add(new AuthProvider
+            Db.Users.Add(user);
+            Db.AuthProviders.Add(new AuthProvider
             {
                 UserId = user.Id,
                 Provider = AuthProviderType.Github,
                 ProviderUserId = "github-123",
             });
-            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             // Try to unlink Google which is not linked
             var result = await _sut.UnlinkProviderAsync(user.Id, AuthProviderType.Google);
