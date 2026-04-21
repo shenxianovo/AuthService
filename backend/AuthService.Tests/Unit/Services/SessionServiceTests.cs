@@ -1,9 +1,12 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.Configuration;
+using AuthService.Entities;
 using AuthService.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Security.Cryptography;
 
 namespace AuthService.Tests.Unit.Services
 {
@@ -119,6 +122,225 @@ namespace AuthService.Tests.Unit.Services
 
             var tokens = await _db.RefreshTokens.ToListAsync(TestContext.Current.CancellationToken);
             Assert.Equal(2, tokens.Count);
+        }
+
+        // ==================== RefreshSessionAsync ====================
+
+        [Fact]
+        public async Task Refresh_WithValidToken_ReturnsNewTokensAndRotates()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var oldRefreshToken = createResult.Value.RefreshToken;
+
+            var refreshResult = await _sut.RefreshSessionAsync(oldRefreshToken);
+
+            Assert.True(refreshResult.IsSuccess);
+            Assert.Equal(userId, refreshResult.Value.UserId);
+            Assert.Equal("fake-access-token", refreshResult.Value.AccessToken);
+            Assert.NotEmpty(refreshResult.Value.RefreshToken);
+            Assert.NotEqual(oldRefreshToken, refreshResult.Value.RefreshToken);
+        }
+
+        [Fact]
+        public async Task Refresh_OldTokenIsRevokedAfterRotation()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var oldRefreshToken = createResult.Value.RefreshToken;
+
+            await _sut.RefreshSessionAsync(oldRefreshToken);
+
+            // Old token should be revoked
+            var tokens = await _db.RefreshTokens.ToListAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(2, tokens.Count);
+            Assert.Contains(tokens, t => t.Revoked);
+            Assert.Contains(tokens, t => !t.Revoked);
+        }
+
+        [Fact]
+        public async Task Refresh_ReplayingOldToken_Fails()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var oldRefreshToken = createResult.Value.RefreshToken;
+
+            // First refresh succeeds
+            var first = await _sut.RefreshSessionAsync(oldRefreshToken);
+            Assert.True(first.IsSuccess);
+
+            // Replaying the same old token must fail
+            var second = await _sut.RefreshSessionAsync(oldRefreshToken);
+            Assert.False(second.IsSuccess);
+            Assert.Equal(AuthError.InvalidRefreshToken, second.Error);
+        }
+
+        [Fact]
+        public async Task Refresh_WithRevokedSession_Fails()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var refreshToken = createResult.Value.RefreshToken;
+
+            // Revoke the session
+            var session = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            await _sut.RevokeSessionAsync(session.Id);
+
+            var result = await _sut.RefreshSessionAsync(refreshToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRefreshToken, result.Error);
+        }
+
+        [Fact]
+        public async Task Refresh_WithExpiredToken_Fails()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var refreshToken = createResult.Value.RefreshToken;
+
+            // Manually expire the token
+            var storedToken = await _db.RefreshTokens.FirstAsync(TestContext.Current.CancellationToken);
+            storedToken.ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.RefreshSessionAsync(refreshToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRefreshToken, result.Error);
+        }
+
+        [Fact]
+        public async Task Refresh_WithExpiredSession_Fails()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var refreshToken = createResult.Value.RefreshToken;
+
+            // Manually expire the session
+            var session = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            session.ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.RefreshSessionAsync(refreshToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRefreshToken, result.Error);
+        }
+
+        [Fact]
+        public async Task Refresh_WithDeletedUser_Fails()
+        {
+            var userId = Guid.NewGuid();
+            var user = new User { Id = userId, DisplayName = "Test" };
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+            var refreshToken = createResult.Value.RefreshToken;
+
+            // Mark user as deleted
+            user.IsDeleted = true;
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.RefreshSessionAsync(refreshToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRefreshToken, result.Error);
+        }
+
+        [Fact]
+        public async Task Refresh_WithNonExistentToken_Fails()
+        {
+            var fakeToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+            var result = await _sut.RefreshSessionAsync(fakeToken);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRefreshToken, result.Error);
+        }
+
+        // ==================== RevokeSessionAsync ====================
+
+        [Fact]
+        public async Task Revoke_MarksSessionAsRevoked()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+
+            var session = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            await _sut.RevokeSessionAsync(session.Id);
+
+            var revokedSession = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            Assert.True(revokedSession.Revoked);
+        }
+
+        [Fact]
+        public async Task Revoke_RevokesAllRefreshTokensInSession()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var createResult = await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+
+            // Refresh once to have 2 tokens (one revoked by rotation, one active)
+            await _sut.RefreshSessionAsync(createResult.Value.RefreshToken);
+
+            var session = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            await _sut.RevokeSessionAsync(session.Id);
+
+            var allTokens = await _db.RefreshTokens.ToListAsync(TestContext.Current.CancellationToken);
+            Assert.All(allTokens, t => Assert.True(t.Revoked));
+        }
+
+        [Fact]
+        public async Task Revoke_NonExistentSession_DoesNothing()
+        {
+            // Should not throw
+            await _sut.RevokeSessionAsync(Guid.NewGuid());
+
+            var sessions = await _db.Sessions.CountAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(0, sessions);
+        }
+
+        [Fact]
+        public async Task Revoke_AlreadyRevokedSession_DoesNothing()
+        {
+            var userId = Guid.NewGuid();
+            _db.Users.Add(new User { Id = userId, DisplayName = "Test" });
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
+
+            var session = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            await _sut.RevokeSessionAsync(session.Id);
+            await _sut.RevokeSessionAsync(session.Id); // second call
+
+            // Should still be revoked, no exceptions
+            var revokedSession = await _db.Sessions.FirstAsync(TestContext.Current.CancellationToken);
+            Assert.True(revokedSession.Revoked);
         }
     }
 }
