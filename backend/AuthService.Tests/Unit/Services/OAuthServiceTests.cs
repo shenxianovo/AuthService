@@ -33,13 +33,13 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             Assert.Equal("TestUser", result.Value.DisplayName);
 
-            var provider = await _db.AuthProviders.FirstOrDefaultAsync();
+            var provider = await _db.AuthProviders.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(provider);
             Assert.Equal(AuthProviderType.Github, provider.Provider);
             Assert.Equal("github-123", provider.ProviderUserId);
             Assert.Equal(result.Value.Id, provider.UserId);
 
-            var email = await _db.UserEmails.FirstOrDefaultAsync();
+            var email = await _db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(email);
             Assert.Equal("user@example.com", email.Email);
             Assert.True(email.IsPrimary);
@@ -55,10 +55,10 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             Assert.Equal("NoEmailUser", result.Value.DisplayName);
 
-            var emails = await _db.UserEmails.CountAsync();
+            var emails = await _db.UserEmails.CountAsync(TestContext.Current.CancellationToken);
             Assert.Equal(0, emails);
 
-            var provider = await _db.AuthProviders.FirstOrDefaultAsync();
+            var provider = await _db.AuthProviders.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(provider);
             Assert.Equal(result.Value.Id, provider.UserId);
         }
@@ -78,7 +78,7 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(second.IsSuccess);
             Assert.Equal(first.Value.Id, second.Value.Id);
 
-            var userCount = await _db.Users.CountAsync();
+            var userCount = await _db.Users.CountAsync(TestContext.Current.CancellationToken);
             Assert.Equal(1, userCount);
         }
 
@@ -90,7 +90,7 @@ namespace AuthService.Tests.Unit.Services
 
             Assert.True(result.IsSuccess);
             result.Value.IsDeleted = true;
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var second = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-123", "user@example.com", "TestUser");
@@ -107,7 +107,7 @@ namespace AuthService.Tests.Unit.Services
             var existingUser = new User { DisplayName = "Existing" };
             _db.Users.Add(existingUser);
             _db.UserEmails.Add(new UserEmail { UserId = existingUser.Id, Email = "shared@example.com", IsPrimary = true });
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-789", "shared@example.com", "GithubUser");
@@ -115,7 +115,7 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             Assert.Equal(existingUser.Id, result.Value.Id);
 
-            var providers = await _db.AuthProviders.Where(p => p.UserId == existingUser.Id).ToListAsync();
+            var providers = await _db.AuthProviders.Where(p => p.UserId == existingUser.Id).ToListAsync(TestContext.Current.CancellationToken);
             Assert.Single(providers);
             Assert.Equal(AuthProviderType.Github, providers[0].Provider);
         }
@@ -126,7 +126,7 @@ namespace AuthService.Tests.Unit.Services
             var existingUser = new User { DisplayName = "Deleted", IsDeleted = true };
             _db.Users.Add(existingUser);
             _db.UserEmails.Add(new UserEmail { UserId = existingUser.Id, Email = "deleted@example.com", IsPrimary = true });
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-000", "deleted@example.com", "GithubUser");
@@ -142,7 +142,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var currentUser = new User { DisplayName = "CurrentUser" };
             _db.Users.Add(currentUser);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Google, "google-123", "google@example.com", "GoogleUser",
@@ -151,11 +151,11 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             Assert.Equal(currentUser.Id, result.Value.Id);
 
-            var provider = await _db.AuthProviders.FirstOrDefaultAsync(p => p.UserId == currentUser.Id);
+            var provider = await _db.AuthProviders.FirstOrDefaultAsync(p => p.UserId == currentUser.Id, TestContext.Current.CancellationToken);
             Assert.NotNull(provider);
             Assert.Equal(AuthProviderType.Google, provider.Provider);
 
-            var email = await _db.UserEmails.FirstOrDefaultAsync(e => e.UserId == currentUser.Id);
+            var email = await _db.UserEmails.FirstOrDefaultAsync(e => e.UserId == currentUser.Id, TestContext.Current.CancellationToken);
             Assert.NotNull(email);
             Assert.Equal("google@example.com", email.Email);
         }
@@ -172,7 +172,7 @@ namespace AuthService.Tests.Unit.Services
             _db.UserEmails.Add(new UserEmail { UserId = otherUser.Id, Email = "shared@example.com", IsPrimary = true });
             _db.AuthProviders.Add(new AuthProvider { UserId = otherUser.Id, Provider = AuthProviderType.Password, ProviderUserId = otherUser.Id.ToString() });
 
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Google, "google-456", "shared@example.com", "GoogleUser",
@@ -181,12 +181,12 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             Assert.Equal(currentUser.Id, result.Value.Id);
 
-            var otherUserAfter = await _db.Users.FindAsync(otherUser.Id);
+            var otherUserAfter = await _db.Users.FindAsync([otherUser.Id], TestContext.Current.CancellationToken);
             Assert.True(otherUserAfter!.IsDeleted);
 
             var movedProviders = await _db.AuthProviders
                 .Where(p => p.UserId == currentUser.Id && p.Provider == AuthProviderType.Password)
-                .CountAsync();
+                .CountAsync(TestContext.Current.CancellationToken);
             Assert.Equal(1, movedProviders);
         }
 
@@ -200,7 +200,7 @@ namespace AuthService.Tests.Unit.Services
             _db.Users.Add(otherUser);
             _db.AuthProviders.Add(new AuthProvider { UserId = otherUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-999" });
 
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-999", null, "GithubUser",
@@ -209,7 +209,7 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             Assert.Equal(currentUser.Id, result.Value.Id);
 
-            var otherUserAfter = await _db.Users.FindAsync(otherUser.Id);
+            var otherUserAfter = await _db.Users.FindAsync([otherUser.Id], TestContext.Current.CancellationToken);
             Assert.True(otherUserAfter!.IsDeleted);
         }
 
@@ -219,7 +219,7 @@ namespace AuthService.Tests.Unit.Services
             var currentUser = new User { DisplayName = "Current" };
             _db.Users.Add(currentUser);
             _db.AuthProviders.Add(new AuthProvider { UserId = currentUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-111" });
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-111", null, "GithubUser",
@@ -254,13 +254,13 @@ namespace AuthService.Tests.Unit.Services
             _db.PasswordCredentials.Add(new PasswordCredential { UserId = sourceUser.Id, PasswordHash = "salt.hash" });
             _db.AuthProviders.Add(new AuthProvider { UserId = sourceUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-merge" });
 
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-merge", null, "GithubUser",
                 currentUserId: currentUser.Id);
 
-            var pwd = await _db.PasswordCredentials.FirstOrDefaultAsync(p => p.UserId == currentUser.Id);
+            var pwd = await _db.PasswordCredentials.FirstOrDefaultAsync(p => p.UserId == currentUser.Id, TestContext.Current.CancellationToken);
             Assert.NotNull(pwd);
             Assert.Equal("salt.hash", pwd.PasswordHash);
         }
@@ -276,13 +276,13 @@ namespace AuthService.Tests.Unit.Services
             _db.Sessions.Add(new Session { UserId = sourceUser.Id, IpAddress = "1.2.3.4", Device = "OldDevice", ExpiresAt = DateTimeOffset.UtcNow.AddDays(30) });
             _db.AuthProviders.Add(new AuthProvider { UserId = sourceUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-session-merge" });
 
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-session-merge", null, "GithubUser",
                 currentUserId: currentUser.Id);
 
-            var sessions = await _db.Sessions.Where(s => s.Device == "OldDevice").ToListAsync();
+            var sessions = await _db.Sessions.Where(s => s.Device == "OldDevice").ToListAsync(TestContext.Current.CancellationToken);
             Assert.Single(sessions);
             Assert.True(sessions[0].Revoked);
             Assert.Equal(currentUser.Id, sessions[0].UserId);
@@ -301,18 +301,18 @@ namespace AuthService.Tests.Unit.Services
             _db.UserEmails.Add(new UserEmail { UserId = sourceUser.Id, Email = "unique@example.com", IsPrimary = false });
             _db.AuthProviders.Add(new AuthProvider { UserId = sourceUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-email-merge" });
 
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-email-merge", null, "GithubUser",
                 currentUserId: currentUser.Id);
 
-            var currentEmails = await _db.UserEmails.Where(e => e.UserId == currentUser.Id).ToListAsync();
+            var currentEmails = await _db.UserEmails.Where(e => e.UserId == currentUser.Id).ToListAsync(TestContext.Current.CancellationToken);
             Assert.Equal(2, currentEmails.Count);
             Assert.Contains(currentEmails, e => e.Email == "shared@example.com" && e.IsPrimary);
             Assert.Contains(currentEmails, e => e.Email == "unique@example.com" && !e.IsPrimary);
 
-            var sourceEmails = await _db.UserEmails.Where(e => e.UserId == sourceUser.Id).CountAsync();
+            var sourceEmails = await _db.UserEmails.Where(e => e.UserId == sourceUser.Id).CountAsync(TestContext.Current.CancellationToken);
             Assert.Equal(0, sourceEmails);
         }
 
@@ -324,7 +324,7 @@ namespace AuthService.Tests.Unit.Services
             await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "github-case", "USER@EXAMPLE.COM", "TestUser");
 
-            var email = await _db.UserEmails.FirstOrDefaultAsync();
+            var email = await _db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(email);
             Assert.Equal("user@example.com", email.Email);
         }

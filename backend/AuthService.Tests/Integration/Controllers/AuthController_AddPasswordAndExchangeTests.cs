@@ -32,7 +32,7 @@ namespace AuthService.Tests.Integration.Controllers
                     Provider = AuthProviderType.Github,
                     ProviderUserId = $"github-addpwd-{Guid.NewGuid():N}"
                 });
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
                 userId = user.Id;
             }
 
@@ -42,7 +42,7 @@ namespace AuthService.Tests.Integration.Controllers
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             request.Content = JsonContent.Create(new AddPasswordRequest { Password = "NewPassword123" });
 
-            var response = await _client.SendAsync(request);
+            var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
@@ -51,7 +51,7 @@ namespace AuthService.Tests.Integration.Controllers
         public async Task AddPassword_WithoutToken_Returns401()
         {
             var response = await _client.PostAsJsonAsync("/api/v1/auth/add-password",
-                new AddPasswordRequest { Password = "NewPassword123" });
+                new AddPasswordRequest { Password = "NewPassword123" }, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -66,14 +66,14 @@ namespace AuthService.Tests.Integration.Controllers
                 DisplayName = "HasPassword",
                 Email = email,
                 Password = "ExistingPass123",
-            });
-            var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
+            }, TestContext.Current.CancellationToken);
+            var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken);
 
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/add-password");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResponse!.AccessToken);
             request.Content = JsonContent.Create(new AddPasswordRequest { Password = "AnotherPass123" });
 
-            var response = await _client.SendAsync(request);
+            var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -98,11 +98,11 @@ namespace AuthService.Tests.Integration.Controllers
             }
 
             var response = await _client.PostAsJsonAsync("/api/v1/auth/exchange",
-                new ExchangeCodeRequest { Code = authCode });
+                new ExchangeCodeRequest { Code = authCode }, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var body = await response.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken);
             Assert.NotNull(body);
             Assert.Equal("test-access-token", body.AccessToken);
             Assert.Equal("test-refresh-token", body.RefreshToken);
@@ -112,7 +112,7 @@ namespace AuthService.Tests.Integration.Controllers
         public async Task Exchange_WithInvalidCode_Returns400()
         {
             var response = await _client.PostAsJsonAsync("/api/v1/auth/exchange",
-                new ExchangeCodeRequest { Code = "invalid-code" });
+                new ExchangeCodeRequest { Code = "invalid-code" }, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -129,11 +129,11 @@ namespace AuthService.Tests.Integration.Controllers
             }
 
             var first = await _client.PostAsJsonAsync("/api/v1/auth/exchange",
-                new ExchangeCodeRequest { Code = authCode });
+                new ExchangeCodeRequest { Code = authCode }, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, first.StatusCode);
 
             var second = await _client.PostAsJsonAsync("/api/v1/auth/exchange",
-                new ExchangeCodeRequest { Code = authCode });
+                new ExchangeCodeRequest { Code = authCode }, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
         }
     }

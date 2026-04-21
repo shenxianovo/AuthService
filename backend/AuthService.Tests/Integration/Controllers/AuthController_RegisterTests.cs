@@ -20,11 +20,11 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "SecurePass123",
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var body = await response.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken);
             Assert.NotNull(body);
             Assert.NotEqual(Guid.Empty, body.UserId);
             Assert.NotEmpty(body.AccessToken);
@@ -44,7 +44,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "SecurePass123",
             };
 
-            var firstResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var firstResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", request, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
 
             var request2 = new RegisterRequest
@@ -54,7 +54,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "SecurePass456",
             };
 
-            var secondResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", request2);
+            var secondResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", request2, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
         }
 
@@ -63,7 +63,7 @@ namespace AuthService.Tests.Integration.Controllers
         {
             var request = new { };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -78,7 +78,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "SecurePass123",
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -93,7 +93,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "123", // less than 8 chars
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }

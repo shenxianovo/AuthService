@@ -52,19 +52,19 @@ namespace AuthService.Tests.Unit.Services
                 Provider = AuthProviderType.Github,
                 ProviderUserId = "github-123"
             });
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.AddPasswordAsync(user.Id, "NewPassword123");
 
             Assert.True(result.IsSuccess);
 
-            var credential = await _db.PasswordCredentials.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            var credential = await _db.PasswordCredentials.FirstOrDefaultAsync(c => c.UserId == user.Id, TestContext.Current.CancellationToken);
             Assert.NotNull(credential);
             Assert.NotEmpty(credential.PasswordHash);
             Assert.NotEqual("NewPassword123", credential.PasswordHash);
 
             var passwordProvider = await _db.AuthProviders
-                .FirstOrDefaultAsync(p => p.UserId == user.Id && p.Provider == AuthProviderType.Password);
+                .FirstOrDefaultAsync(p => p.UserId == user.Id && p.Provider == AuthProviderType.Password, TestContext.Current.CancellationToken);
             Assert.NotNull(passwordProvider);
         }
 
@@ -78,7 +78,7 @@ namespace AuthService.Tests.Unit.Services
                 UserId = user.Id,
                 PasswordHash = "existing-hash"
             });
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.AddPasswordAsync(user.Id, "NewPassword123");
 

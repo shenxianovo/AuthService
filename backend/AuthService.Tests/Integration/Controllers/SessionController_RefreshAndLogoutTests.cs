@@ -19,9 +19,9 @@ namespace AuthService.Tests.Integration.Controllers
                 DisplayName = "SessionTestUser",
                 Email = email,
                 Password = "SecurePass123",
-            });
+            }, TestContext.Current.CancellationToken);
             response.EnsureSuccessStatusCode();
-            return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
+            return (await response.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken))!;
         }
 
         // ==================== Refresh ====================
@@ -34,11 +34,11 @@ namespace AuthService.Tests.Integration.Controllers
             var response = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest
             {
                 RefreshToken = auth.RefreshToken
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var body = await response.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken);
             Assert.NotNull(body);
             Assert.NotEmpty(body.AccessToken);
             Assert.NotEmpty(body.RefreshToken);
@@ -56,14 +56,14 @@ namespace AuthService.Tests.Integration.Controllers
             var first = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest
             {
                 RefreshToken = auth.RefreshToken
-            });
+            }, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, first.StatusCode);
 
             // Replaying the old token must fail
             var second = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest
             {
                 RefreshToken = auth.RefreshToken
-            });
+            }, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, second.StatusCode);
         }
 
@@ -73,7 +73,7 @@ namespace AuthService.Tests.Integration.Controllers
             var response = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest
             {
                 RefreshToken = Convert.ToBase64String(new byte[64])
-            });
+            }, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -88,7 +88,7 @@ namespace AuthService.Tests.Integration.Controllers
             var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
 
-            var response = await _client.SendAsync(request);
+            var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         }
 
@@ -100,21 +100,21 @@ namespace AuthService.Tests.Integration.Controllers
             // Logout
             var logoutReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
             logoutReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
-            var logoutResp = await _client.SendAsync(logoutReq);
+            var logoutResp = await _client.SendAsync(logoutReq, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NoContent, logoutResp.StatusCode);
 
             // Refresh should now fail
             var refreshResp = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest
             {
                 RefreshToken = auth.RefreshToken
-            });
+            }, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, refreshResp.StatusCode);
         }
 
         [Fact]
         public async Task Logout_WithoutToken_Returns401()
         {
-            var response = await _client.PostAsync("/api/v1/auth/logout", null);
+            var response = await _client.PostAsync("/api/v1/auth/logout", null, TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
     }

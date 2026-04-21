@@ -19,9 +19,9 @@ namespace AuthService.Tests.Integration.Controllers
                 Email = email,
                 Password = password,
             };
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request, TestContext.Current.CancellationToken);
             response.EnsureSuccessStatusCode();
-            return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
+            return (await response.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken))!;
         }
 
         [Fact]
@@ -36,11 +36,11 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "SecurePass123",
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            var body = await response.Content.ReadFromJsonAsync<AuthResponse>(TestContext.Current.CancellationToken);
             Assert.NotNull(body);
             Assert.NotEqual(Guid.Empty, body.UserId);
             Assert.NotEmpty(body.AccessToken);
@@ -59,7 +59,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "WrongPassword",
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -73,7 +73,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "Whatever123",
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -90,7 +90,7 @@ namespace AuthService.Tests.Integration.Controllers
                 Password = "SecurePass123",
             };
 
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest, TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
