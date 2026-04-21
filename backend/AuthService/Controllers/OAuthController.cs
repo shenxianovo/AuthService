@@ -147,18 +147,5 @@ namespace AuthService.Controllers
             return Ok(result.Value);
         }
 
-        /// <summary>
-        /// Extract user ID from the Authorization header JWT (for binding flows).
-        /// </summary>
-        private Guid? GetUserIdFromAuthHeader()
-        {
-            var authHeader = Request.Headers.Authorization.ToString();
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
-                return null;
-
-            var token = authHeader["Bearer ".Length..];
-            var jwtSvc = HttpContext.RequestServices.GetRequiredService<IJwtService>();
-            return jwtSvc.ValidateTokenAndGetUserId(token);
-        }
     }
 }

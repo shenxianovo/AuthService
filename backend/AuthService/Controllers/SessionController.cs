@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AuthService.DTOs.Auth;
 using AuthService.Extensions;
 using AuthService.Services;
@@ -10,8 +11,7 @@ namespace AuthService.Controllers
     [Route("api/v1/auth")]
     [Produces("application/json")]
     public class SessionController(
-        ISessionService sessionService,
-        IJwtService jwtService) : ControllerBase
+        ISessionService sessionService) : ControllerBase
     {
         /// <summary>
         /// Exchange a valid refresh token for a new access token + rotated refresh token.
@@ -36,14 +36,11 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Logout()
         {
-            var authHeader = Request.Headers.Authorization.ToString();
-            var token = authHeader.StartsWith("Bearer ") ? authHeader["Bearer ".Length..] : null;
-            if (token == null) return Unauthorized();
+            var sidClaim = User.FindFirstValue("sid");
+            if (!Guid.TryParse(sidClaim, out var sessionId))
+                return Unauthorized();
 
-            var sessionId = jwtService.GetSessionIdFromToken(token);
-            if (sessionId == null) return Unauthorized();
-
-            await sessionService.RevokeSessionAsync(sessionId.Value);
+            await sessionService.RevokeSessionAsync(sessionId);
             return NoContent();
         }
     }
