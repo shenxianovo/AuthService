@@ -105,6 +105,21 @@ backend/
     └── adr-template.md
 ```
 
+## Frontend API Client
+
+The TypeScript API client is auto-generated from the OpenAPI spec using [NSwag](https://github.com/RicoSuter/NSwag):
+
+```bash
+nswag openapi2tsclient \
+  /input:http://localhost:5252/swagger/v1/swagger.json \
+  /output:frontend/src/api/client.ts \
+  /TypeScriptVersion:5.0 \
+  /GenerateClientInterfaces:true \
+  /Template:Fetch
+```
+
+Re-run this command whenever backend API endpoints change.
+
 ## Database
 
 EF Core Code First with PostgreSQL. See [ER diagram](backend/AuthService/Docs/Db.md).
