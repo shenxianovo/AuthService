@@ -128,14 +128,24 @@ namespace AuthService.Services
             if (string.IsNullOrWhiteSpace(rawKey))
                 return false;
 
-            // ak_<prefix>_<secret>
-            var parts = rawKey.Split('_', 3);
-            if (parts.Length != 3 || parts[0] != "ak")
+            // Format: ak_<prefix(8)>_<secret>
+            // Use fixed-position parsing because prefix/secret may contain '_'
+            const string header = "ak_";
+            if (!rawKey.StartsWith(header))
                 return false;
 
-            prefix = parts[1];
-            secret = parts[2];
-            return prefix.Length == PrefixLength && secret.Length > 0;
+            // prefix starts at index 3, length 8
+            if (rawKey.Length < header.Length + PrefixLength + 1) // +1 for separator '_'
+                return false;
+
+            prefix = rawKey.Substring(header.Length, PrefixLength);
+
+            // Expect '_' separator after prefix
+            if (rawKey[header.Length + PrefixLength] != '_')
+                return false;
+
+            secret = rawKey[(header.Length + PrefixLength + 1)..];
+            return secret.Length > 0;
         }
 
         private static string ComputeSha256(string input)
