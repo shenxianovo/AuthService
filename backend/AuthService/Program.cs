@@ -133,6 +133,17 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Minimal OIDC discovery — allows JWT Bearer middleware to auto-discover keys via Authority
+app.MapGet("/.well-known/openid-configuration", (IConfiguration config, HttpContext ctx) =>
+{
+    var baseUrl = $"{ctx.Request.Scheme}://{ctx.Request.Host}";
+    return Results.Json(new
+    {
+        issuer = config["Jwt:Issuer"],
+        jwks_uri = $"{baseUrl}/.well-known/jwks.json",
+    });
+}).AllowAnonymous();
+
 // JWKS endpoint — allows downstream services to verify JWTs offline
 app.MapGet("/.well-known/jwks.json", (IJwtService jwtService) =>
 {
