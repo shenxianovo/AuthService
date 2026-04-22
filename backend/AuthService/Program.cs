@@ -113,14 +113,14 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 
 // Auto-apply migrations on startup (safe for single-instance deployment)
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (db.Database.IsRelational())
-        await db.Database.MigrateAsync();
-    else
-        await db.Database.EnsureCreatedAsync();
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+//     if (db.Database.IsRelational())
+//         await db.Database.MigrateAsync();
+//     else
+//         await db.Database.EnsureCreatedAsync();
+// }
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
