@@ -11,8 +11,10 @@ import {
   PasswordAuthClient,
   SessionClient,
   UserClient,
+  ApiKeyClient,
   VerifyEmailRequest,
   AddEmailRequest,
+  CreateApiKeyRequest,
 } from './client'
 
 export type {
@@ -21,6 +23,8 @@ export type {
   EmailInfo,
   ProviderInfo,
   ProblemDetails,
+  CreateApiKeyResponse,
+  ApiKeyListItem,
 } from './client'
 
 export { ApiException } from './client'
@@ -116,6 +120,7 @@ const passwordClient = new PasswordAuthClient(CLIENT_BASE)
 const authPasswordClient = new PasswordAuthClient(CLIENT_BASE, authHttp)
 const sessionClient = new SessionClient(CLIENT_BASE, authHttp)
 const userClient = new UserClient(CLIENT_BASE, authHttp)
+const apiKeyClient = new ApiKeyClient(CLIENT_BASE, authHttp)
 
 // ---------- public API ----------
 
@@ -185,4 +190,18 @@ export async function removeEmail(email: string): Promise<void> {
 
 export async function setPrimaryEmail(email: string): Promise<void> {
   await authPasswordClient.setPrimaryEmail(email)
+}
+
+// ---------- API Keys ----------
+
+export async function createApiKey(name: string) {
+  return apiKeyClient.create(new CreateApiKeyRequest({ name }))
+}
+
+export async function listApiKeys() {
+  return apiKeyClient.list()
+}
+
+export async function revokeApiKey(id: string) {
+  await apiKeyClient.revoke(id)
 }

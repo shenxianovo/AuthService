@@ -43,7 +43,7 @@
           </div>
           <div class="card-body" v-if="userInfo">
             <div class="email-list">
-              <div v-for="email in userInfo.emails" :key="email.email" class="email-item">
+              <div v-for="email in userInfo.emails" :key="email.email" class="list-item">
                 <div class="email-address">
                   <span class="email-text">{{ email.email }}</span>
                 </div>
@@ -72,7 +72,7 @@
                 </div>
               </div>
             </div>
-            <div class="add-email-row">
+            <div class="form-row">
               <input
                 type="email"
                 v-model="newEmailInput"
@@ -129,6 +129,21 @@
           </div>
         </section>
 
+        <!-- API Keys Card -->
+        <section class="card card-apikeys">
+          <div class="card-header">
+            <h3><svg class="section-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API Keys</h3>
+          </div>
+          <div class="card-body">
+            <ApiKeysView
+              :loading="loading"
+              @error="(msg) => $emit('apiKeyError', msg)"
+              @success="(msg) => $emit('apiKeySuccess', msg)"
+              @update:loading="(val) => $emit('update:loading', val)"
+            />
+          </div>
+        </section>
+
         <!-- Security Settings Card -->
         <section class="card card-security">
           <div class="card-header">
@@ -143,7 +158,7 @@
                 </span>
               </div>
             </div>
-            <div class="password-form">
+            <div class="form-row">
               <input
                 type="password"
                 :value="newPassword"
@@ -165,6 +180,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { UserInfoResponse } from '@/api'
+import ApiKeysView from './ApiKeysView.vue'
 
 const props = defineProps<{
   userInfo: UserInfoResponse | null
@@ -184,6 +200,9 @@ const emit = defineEmits<{
   setPrimaryEmail: [email: string]
   logout: []
   'update:newPassword': [value: string]
+  apiKeyError: [message: string]
+  apiKeySuccess: [message: string]
+  'update:loading': [value: boolean]
 }>()
 
 const newEmailInput = ref('')
@@ -407,17 +426,6 @@ const canUnlink = computed(() => {
   margin-bottom: 16px;
 }
 
-.email-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #f8f9fb;
-  border-radius: 10px;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 .email-text {
   font-size: 14px;
   color: #333;
@@ -429,20 +437,6 @@ const canUnlink = computed(() => {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-.add-email-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.add-email-row .input { flex: 1; min-width: 0; }
-
-.error-text {
-  color: #dc3545;
-  font-size: 12px;
-  margin-top: 6px;
 }
 
 .provider-grid {
@@ -495,12 +489,6 @@ const canUnlink = computed(() => {
   border-top: 1px solid #f0f0f0;
 }
 
-.empty-state {
-  color: #aaa;
-  font-size: 14px;
-  margin: 8px 0;
-}
-
 .security-item {
   display: flex;
   align-items: center;
@@ -529,126 +517,6 @@ const canUnlink = computed(() => {
   font-size: 13px;
 }
 
-.password-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.password-form .input { flex: 1; min-width: 0; }
-
-.input {
-  padding: 8px 12px;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 13px;
-  transition: border-color .2s, box-shadow .2s;
-  outline: none;
-  background: #fff;
-}
-
-.input:focus {
-  border-color: #333;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, .06);
-}
-
-.btn {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
-  background: #1a1a2e;
-  color: #fff;
-}
-
-.btn:hover:not(:disabled) {
-  background: #2d2d44;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.12);
-}
-
-.btn:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 12px;
-  width: auto;
-  flex-shrink: 0;
-}
-
-.btn-github { background: #24292e; color: #fff; }
-.btn-github:hover:not(:disabled) { background: #1b1f23; }
-
-.btn-google { background: #fff; color: #333; border: 1.5px solid #e0e0e0; }
-.btn-google:hover:not(:disabled) { background: #f8f8f8; border-color: #ccc; }
-
-.badge {
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  white-space: nowrap;
-}
-
-.badge-primary { background: #eef0f2; color: #555; }
-.badge-success { background: #dcfce7; color: #16a34a; }
-.badge-warning { background: #fef3c7; color: #d97706; border: 1px solid #fbbf24; }
-.badge-info { background: #e0e7ff; color: #4f46e5; border: 1px solid #a5b4fc; }
-
-.badge-btn {
-  cursor: pointer;
-  transition: all .15s;
-}
-
-.badge-btn:hover:not(:disabled) {
-  filter: brightness(0.9);
-  transform: scale(1.05);
-}
-
-.badge-btn:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-}
-
-.btn-icon-sm {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  border-radius: 50%;
-  color: #aaa;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all .15s;
-}
-
-.btn-remove:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.btn-icon-sm:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
 
 @media (max-width: 900px) {
   .dashboard-grid {
@@ -688,17 +556,6 @@ const canUnlink = computed(() => {
   .profile-hero {
     flex-direction: column;
     text-align: center;
-  }
-  .email-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  .add-email-row {
-    flex-direction: column;
-  }
-  .password-form {
-    flex-direction: column;
   }
   .link-actions {
     flex-direction: column;

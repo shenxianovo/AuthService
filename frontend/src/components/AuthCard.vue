@@ -14,6 +14,9 @@
       @addEmail="handleAddEmail"
       @removeEmail="handleRemoveEmail"
       @setPrimaryEmail="handleSetPrimaryEmail"
+      @apiKeyError="(msg) => { error = msg }"
+      @apiKeySuccess="(msg) => { successMsg = msg }"
+      @update:loading="(val) => { loading = val }"
       @logout="handleLogout"
     />
     <div v-if="error" class="dashboard-toast error">{{ error }}</div>

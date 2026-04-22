@@ -7,6 +7,213 @@
 /* eslint-disable */
 // ReSharper disable InconsistentNaming
 
+export interface IApiKeyClient {
+
+    create(request: CreateApiKeyRequest): Promise<CreateApiKeyResponse>;
+
+    list(): Promise<ApiKeyListItem[]>;
+
+    revoke(id: string): Promise<void>;
+
+    exchange(request: ExchangeApiKeyRequest): Promise<ExchangeApiKeyResponse>;
+}
+
+export class ApiKeyClient implements IApiKeyClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "http://localhost:5252";
+    }
+
+    create(request: CreateApiKeyRequest): Promise<CreateApiKeyResponse> {
+        let url_ = this.baseUrl + "/api/v1/apikeys";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCreate(_response);
+        });
+    }
+
+    protected processCreate(response: Response): Promise<CreateApiKeyResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 201) {
+            return response.text().then((_responseText) => {
+            let result201: any = null;
+            let resultData201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result201 = CreateApiKeyResponse.fromJS(resultData201);
+            return result201;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CreateApiKeyResponse>(null as any);
+    }
+
+    list(): Promise<ApiKeyListItem[]> {
+        let url_ = this.baseUrl + "/api/v1/apikeys";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processList(_response);
+        });
+    }
+
+    protected processList(response: Response): Promise<ApiKeyListItem[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(ApiKeyListItem.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ApiKeyListItem[]>(null as any);
+    }
+
+    revoke(id: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/apikeys/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRevoke(_response);
+        });
+    }
+
+    protected processRevoke(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 204) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    exchange(request: ExchangeApiKeyRequest): Promise<ExchangeApiKeyResponse> {
+        let url_ = this.baseUrl + "/api/v1/apikeys/exchange";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchange(_response);
+        });
+    }
+
+    protected processExchange(response: Response): Promise<ExchangeApiKeyResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ExchangeApiKeyResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ExchangeApiKeyResponse>(null as any);
+    }
+}
+
 export interface IExchangeClient {
 
     exchangeCode(request: ExchangeCodeRequest): Promise<AuthResponse>;
@@ -922,13 +1129,13 @@ export class UserClient implements IUserClient {
     }
 }
 
-export class AuthResponse implements IAuthResponse {
-    userId?: string;
-    accessToken?: string;
-    refreshToken?: string;
-    expiresAt?: Date;
+export class CreateApiKeyResponse implements ICreateApiKeyResponse {
+    id?: string;
+    name?: string;
+    key?: string;
+    createdAt?: Date;
 
-    constructor(data?: IAuthResponse) {
+    constructor(data?: ICreateApiKeyResponse) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -939,35 +1146,35 @@ export class AuthResponse implements IAuthResponse {
 
     init(_data?: any) {
         if (_data) {
-            this.userId = _data["userId"];
-            this.accessToken = _data["accessToken"];
-            this.refreshToken = _data["refreshToken"];
-            this.expiresAt = _data["expiresAt"] ? new Date(_data["expiresAt"].toString()) : undefined as any;
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.key = _data["key"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
         }
     }
 
-    static fromJS(data: any): AuthResponse {
+    static fromJS(data: any): CreateApiKeyResponse {
         data = typeof data === 'object' ? data : {};
-        let result = new AuthResponse();
+        let result = new CreateApiKeyResponse();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["userId"] = this.userId;
-        data["accessToken"] = this.accessToken;
-        data["refreshToken"] = this.refreshToken;
-        data["expiresAt"] = this.expiresAt ? this.expiresAt.toISOString() : undefined as any;
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["key"] = this.key;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
         return data;
     }
 }
 
-export interface IAuthResponse {
-    userId?: string;
-    accessToken?: string;
-    refreshToken?: string;
-    expiresAt?: Date;
+export interface ICreateApiKeyResponse {
+    id?: string;
+    name?: string;
+    key?: string;
+    createdAt?: Date;
 }
 
 export class ProblemDetails implements IProblemDetails {
@@ -1032,6 +1239,222 @@ export interface IProblemDetails {
     instance?: string | undefined;
 
     [key: string]: any;
+}
+
+export class CreateApiKeyRequest implements ICreateApiKeyRequest {
+    name!: string;
+
+    constructor(data?: ICreateApiKeyRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"];
+        }
+    }
+
+    static fromJS(data: any): CreateApiKeyRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new CreateApiKeyRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name;
+        return data;
+    }
+}
+
+export interface ICreateApiKeyRequest {
+    name: string;
+}
+
+export class ApiKeyListItem implements IApiKeyListItem {
+    id?: string;
+    name?: string;
+    prefix?: string;
+    createdAt?: Date;
+    lastUsedAt?: Date | undefined;
+    isRevoked?: boolean;
+
+    constructor(data?: IApiKeyListItem) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.prefix = _data["prefix"];
+            this.createdAt = _data["createdAt"] ? new Date(_data["createdAt"].toString()) : undefined as any;
+            this.lastUsedAt = _data["lastUsedAt"] ? new Date(_data["lastUsedAt"].toString()) : undefined as any;
+            this.isRevoked = _data["isRevoked"];
+        }
+    }
+
+    static fromJS(data: any): ApiKeyListItem {
+        data = typeof data === 'object' ? data : {};
+        let result = new ApiKeyListItem();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["prefix"] = this.prefix;
+        data["createdAt"] = this.createdAt ? this.createdAt.toISOString() : undefined as any;
+        data["lastUsedAt"] = this.lastUsedAt ? this.lastUsedAt.toISOString() : undefined as any;
+        data["isRevoked"] = this.isRevoked;
+        return data;
+    }
+}
+
+export interface IApiKeyListItem {
+    id?: string;
+    name?: string;
+    prefix?: string;
+    createdAt?: Date;
+    lastUsedAt?: Date | undefined;
+    isRevoked?: boolean;
+}
+
+export class ExchangeApiKeyResponse implements IExchangeApiKeyResponse {
+    accessToken?: string;
+    expiresIn?: number;
+
+    constructor(data?: IExchangeApiKeyResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.accessToken = _data["accessToken"];
+            this.expiresIn = _data["expiresIn"];
+        }
+    }
+
+    static fromJS(data: any): ExchangeApiKeyResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new ExchangeApiKeyResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["accessToken"] = this.accessToken;
+        data["expiresIn"] = this.expiresIn;
+        return data;
+    }
+}
+
+export interface IExchangeApiKeyResponse {
+    accessToken?: string;
+    expiresIn?: number;
+}
+
+export class ExchangeApiKeyRequest implements IExchangeApiKeyRequest {
+    apiKey!: string;
+
+    constructor(data?: IExchangeApiKeyRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.apiKey = _data["apiKey"];
+        }
+    }
+
+    static fromJS(data: any): ExchangeApiKeyRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ExchangeApiKeyRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["apiKey"] = this.apiKey;
+        return data;
+    }
+}
+
+export interface IExchangeApiKeyRequest {
+    apiKey: string;
+}
+
+export class AuthResponse implements IAuthResponse {
+    userId?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: Date;
+
+    constructor(data?: IAuthResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.userId = _data["userId"];
+            this.accessToken = _data["accessToken"];
+            this.refreshToken = _data["refreshToken"];
+            this.expiresAt = _data["expiresAt"] ? new Date(_data["expiresAt"].toString()) : undefined as any;
+        }
+    }
+
+    static fromJS(data: any): AuthResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new AuthResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["userId"] = this.userId;
+        data["accessToken"] = this.accessToken;
+        data["refreshToken"] = this.refreshToken;
+        data["expiresAt"] = this.expiresAt ? this.expiresAt.toISOString() : undefined as any;
+        return data;
+    }
+}
+
+export interface IAuthResponse {
+    userId?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: Date;
 }
 
 export class ExchangeCodeRequest implements IExchangeCodeRequest {
