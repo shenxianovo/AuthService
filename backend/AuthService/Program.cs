@@ -133,4 +133,26 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// JWKS endpoint — allows downstream services to verify JWTs offline
+app.MapGet("/.well-known/jwks.json", (IJwtService jwtService) =>
+{
+    var key = jwtService.GetPublicKey();
+    var parameters = key.Rsa!.ExportParameters(false);
+    var jwk = new
+    {
+        keys = new[]
+        {
+            new
+            {
+                kty = "RSA",
+                use = "sig",
+                alg = "RS256",
+                n = Base64UrlEncoder.Encode(parameters.Modulus!),
+                e = Base64UrlEncoder.Encode(parameters.Exponent!),
+            }
+        }
+    };
+    return Results.Json(jwk);
+}).AllowAnonymous();
+
 app.Run();
