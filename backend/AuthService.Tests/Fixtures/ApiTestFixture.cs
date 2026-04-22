@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Security.Claims;
+using System.Security.Cryptography;
 using AuthService.Data;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -93,7 +94,7 @@ namespace AuthService.Tests.Fixtures
         public string GenerateAccessToken(Guid userId, Guid? sessionId = null)
         {
             var jwtService = Factory.Services.GetRequiredService<IJwtService>();
-            return jwtService.GenerateAccessToken(userId, sessionId ?? Guid.NewGuid());
+            return jwtService.GenerateAccessToken(userId, new Claim("sid", (sessionId ?? Guid.NewGuid()).ToString()));
         }
 
         public async ValueTask DisposeAsync()

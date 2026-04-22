@@ -87,6 +87,7 @@ builder.Services.AddTransient<IResend, ResendClient>();
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddScoped<IEmailManagementService, EmailManagementService>();
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -111,15 +112,15 @@ var app = builder.Build();
 // Nginx forwarded headers
 app.UseForwardedHeaders();
 
-// Apply migrations via CLI: dotnet ef database update
-// using (var scope = app.Services.CreateScope())
-// {
-//     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-//     if (db.Database.IsRelational())
-//         db.Database.Migrate();
-//     else
-//         db.Database.EnsureCreated();
-// }
+// Auto-apply migrations on startup (safe for single-instance deployment)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (db.Database.IsRelational())
+        await db.Database.MigrateAsync();
+    else
+        await db.Database.EnsureCreatedAsync();
+}
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 

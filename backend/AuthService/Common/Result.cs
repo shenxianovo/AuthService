@@ -82,5 +82,9 @@ namespace AuthService.Common
         // 400 Bad Request – unlink
         CannotUnlinkLastLoginMethod,
         ProviderNotLinked,
+
+        // 400/401 – API Key
+        ApiKeyNotFound,
+        InvalidApiKey,
     }
 }

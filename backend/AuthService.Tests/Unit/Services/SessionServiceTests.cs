@@ -6,6 +6,7 @@ using AuthService.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace AuthService.Tests.Unit.Services
@@ -19,7 +20,7 @@ namespace AuthService.Tests.Unit.Services
         {
             _jwtServiceMock = new Mock<IJwtService>();
             _jwtServiceMock
-                .Setup(j => j.GenerateAccessToken(It.IsAny<Guid>(), It.IsAny<Guid>()))
+                .Setup(j => j.GenerateAccessToken(It.IsAny<Guid>(), It.IsAny<Claim[]>()))
                 .Returns("fake-access-token");
 
             var jwtOptions = Options.Create(new JwtOptions
@@ -68,7 +69,7 @@ namespace AuthService.Tests.Unit.Services
             await _sut.CreateSessionAsync(userId, "127.0.0.1", "TestAgent");
 
             _jwtServiceMock.Verify(
-                j => j.GenerateAccessToken(userId, It.IsAny<Guid>()),
+                j => j.GenerateAccessToken(userId, It.IsAny<Claim[]>()),
                 Times.Once);
         }
 

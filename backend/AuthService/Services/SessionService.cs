@@ -5,6 +5,7 @@ using AuthService.Entities;
 using AuthService.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace AuthService.Services
@@ -47,7 +48,7 @@ namespace AuthService.Services
 
             await db.SaveChangesAsync();
 
-            var accessToken = jwtService.GenerateAccessToken(userId, session.Id);
+            var accessToken = jwtService.GenerateAccessToken(userId, new Claim("sid", session.Id.ToString()));
 
             return Result<AuthResponse>.Ok(new AuthResponse
             {
@@ -92,7 +93,7 @@ namespace AuthService.Services
             await db.SaveChangesAsync();
 
             var session = existing.Session;
-            var accessToken = jwtService.GenerateAccessToken(session.UserId, session.Id);
+            var accessToken = jwtService.GenerateAccessToken(session.UserId, new Claim("sid", session.Id.ToString()));
 
             return Result<AuthResponse>.Ok(new AuthResponse
             {

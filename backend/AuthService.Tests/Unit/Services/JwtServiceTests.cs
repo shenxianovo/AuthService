@@ -50,7 +50,7 @@ namespace AuthService.Tests.Unit.Services
             var userId = Guid.NewGuid();
             var sessionId = Guid.NewGuid();
 
-            var token = _sut.GenerateAccessToken(userId, sessionId);
+            var token = _sut.GenerateAccessToken(userId, new Claim("sid", sessionId.ToString()));
 
             Assert.NotNull(token);
             Assert.NotEmpty(token);
@@ -62,7 +62,7 @@ namespace AuthService.Tests.Unit.Services
             var userId = Guid.NewGuid();
             var sessionId = Guid.NewGuid();
 
-            var token = _sut.GenerateAccessToken(userId, sessionId);
+            var token = _sut.GenerateAccessToken(userId, new Claim("sid", sessionId.ToString()));
 
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(token);
@@ -83,7 +83,7 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public void GenerateAccessToken_HasCorrectExpiration()
         {
-            var token = _sut.GenerateAccessToken(Guid.NewGuid(), Guid.NewGuid());
+            var token = _sut.GenerateAccessToken(Guid.NewGuid(), new Claim("sid", Guid.NewGuid().ToString()));
 
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(token);
@@ -108,7 +108,7 @@ namespace AuthService.Tests.Unit.Services
             var userId = Guid.NewGuid();
             var sessionId = Guid.NewGuid();
 
-            var token = _sut.GenerateAccessToken(userId, sessionId);
+            var token = _sut.GenerateAccessToken(userId, new Claim("sid", sessionId.ToString()));
             var result = _sut.ValidateTokenAndGetUserId(token);
 
             Assert.NotNull(result);
@@ -146,9 +146,9 @@ namespace AuthService.Tests.Unit.Services
             };
 
             var otherService = new JwtService(Options.Create(otherOptions));
-            var tokenFromOther = otherService.GenerateAccessToken(Guid.NewGuid(), Guid.NewGuid());
+            var tokenFromOther = otherService.GenerateAccessToken(Guid.NewGuid(), new Claim("sid", Guid.NewGuid().ToString()));
 
-            // Validate with original service's key â€?should fail
+            // Validate with original service's key ï¿½?should fail
             var result = _sut.ValidateTokenAndGetUserId(tokenFromOther);
 
             Assert.Null(result);
@@ -162,8 +162,8 @@ namespace AuthService.Tests.Unit.Services
             var userId = Guid.NewGuid();
             var sessionId = Guid.NewGuid();
 
-            var token1 = _sut.GenerateAccessToken(userId, sessionId);
-            var token2 = _sut.GenerateAccessToken(userId, sessionId);
+            var token1 = _sut.GenerateAccessToken(userId, new Claim("sid", sessionId.ToString()));
+            var token2 = _sut.GenerateAccessToken(userId, new Claim("sid", sessionId.ToString()));
 
             var handler = new JwtSecurityTokenHandler();
             var jti1 = handler.ReadJwtToken(token1).Claims.First(c => c.Type == JwtRegisteredClaimNames.Jti).Value;

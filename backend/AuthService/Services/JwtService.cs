@@ -9,7 +9,7 @@ namespace AuthService.Services
 {
     public interface IJwtService
     {
-        string GenerateAccessToken(Guid userId, Guid sessionId);
+        string GenerateAccessToken(Guid userId, params Claim[] extraClaims);
         RsaSecurityKey GetPublicKey();
         Guid? ValidateTokenAndGetUserId(string token);
         Guid? GetSessionIdFromToken(string token);
@@ -35,17 +35,17 @@ namespace AuthService.Services
             _publicKey.ImportFromPem(publicKeyPem);
         }
 
-        public string GenerateAccessToken(Guid userId, Guid sessionId)
+        public string GenerateAccessToken(Guid userId, params Claim[] extraClaims)
         {
             var signingKey = new RsaSecurityKey(_privateKey);
             var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.RsaSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.CreateVersion7().ToString()),
-                new Claim("sid", sessionId.ToString()),
+                new(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                new(JwtRegisteredClaimNames.Jti, Guid.CreateVersion7().ToString()),
             };
+            claims.AddRange(extraClaims);
 
             var token = new JwtSecurityToken(
                 issuer: _options.Issuer,

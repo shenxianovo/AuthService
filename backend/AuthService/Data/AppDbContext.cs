@@ -13,6 +13,7 @@ namespace AuthService.Data
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<EmailVerification> EmailVerifications => Set<EmailVerification>();
         public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
+        public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

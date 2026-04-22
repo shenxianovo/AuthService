@@ -11,6 +11,7 @@
         public ICollection<UserEmail> Emails { get; } = [];
         public ICollection<AuthProvider> Providers { get; } = [];
         public ICollection<Session> Sessions { get; } = [];
+        public ICollection<ApiKey> ApiKeys { get; } = [];
         public PasswordCredential? PasswordCredential { get; set; }
     }
 }

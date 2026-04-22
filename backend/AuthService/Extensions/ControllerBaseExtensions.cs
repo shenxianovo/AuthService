@@ -49,6 +49,12 @@ namespace AuthService.Extensions
                 AuthError.ProviderNotLinked =>
                     controller.BadRequest(new { message = message ?? "Provider is not linked to this account." }),
 
+                AuthError.ApiKeyNotFound =>
+                    controller.NotFound(new { message = message ?? "API key not found." }),
+
+                AuthError.InvalidApiKey =>
+                    controller.Unauthorized(new { message = message ?? "Invalid API key." }),
+
                 _ => controller.BadRequest(new { message = message ?? "An error occurred." })
             };
         }

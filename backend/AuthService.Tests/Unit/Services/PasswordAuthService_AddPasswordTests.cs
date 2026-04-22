@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AuthService.Common;
 using AuthService.Entities;
 using AuthService.Configuration;
@@ -18,7 +19,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var jwtServiceMock = new Mock<IJwtService>();
             jwtServiceMock
-                .Setup(j => j.GenerateAccessToken(It.IsAny<Guid>(), It.IsAny<Guid>()))
+                .Setup(j => j.GenerateAccessToken(It.IsAny<Guid>(), It.IsAny<Claim[]>()))
                 .Returns("fake-access-token");
 
             var jwtOptions = Options.Create(new JwtOptions
