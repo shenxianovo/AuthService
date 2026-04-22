@@ -20,12 +20,13 @@ Client (Web / App)
 │  JWT Access Token      ← stateless   │
 │  Refresh Token Rotation              │
 │  RS256 asymmetric signing            │
+│  API Key → JWT exchange              │
 │                                      │
 │  OAuth: GitHub, Google               │
 │  Password: ASP.NET Identity Hasher   │
 │  Email: Resend                       │
 └──────────────────┬───────────────────┘
-                   │ public key
+                   │ public key / API Key exchange
                    ▼
          ┌───────────────────┐
          │  Other Services   │
@@ -58,6 +59,7 @@ backend/
 │   │   ├── SessionController.cs          #   refresh, logout
 │   │   ├── OAuthController.cs            #   OAuth login/callback (GitHub, Google)
 │   │   ├── ExchangeController.cs         #   auth-code → token exchange
+│   │   ├── ApiKeyController.cs           #   API key create/list/revoke/exchange
 │   │   ├── UserController.cs             #   me, unlink-provider
 │   │   └── HealthController.cs           #   health check
 │   ├── Services/                         # Business logic
@@ -70,6 +72,7 @@ backend/
 │   │   ├── GithubAuthService.cs          #   GitHub OAuth API client
 │   │   ├── GoogleAuthService.cs          #   Google OAuth API client
 │   │   ├── EmailVerificationService.cs   #   email verification codes
+│   │   ├── ApiKeyService.cs              #   API key CRUD + exchange for JWT
 │   │   ├── EmailManagementService.cs     #   add/remove/set-primary email
 │   │   └── ResendEmailService.cs         #   Resend API wrapper
 │   ├── Entities/                         # EF Core entities
@@ -106,7 +109,7 @@ backend/
 
 EF Core Code First with PostgreSQL. See [ER diagram](backend/AuthService/Docs/Db.md).
 
-Key tables: `Users`, `UserEmails`, `AuthProviders`, `PasswordCredentials`, `Sessions`, `RefreshTokens`, `EmailVerifications`, `PasswordResets`.
+Key tables: `Users`, `UserEmails`, `AuthProviders`, `PasswordCredentials`, `Sessions`, `RefreshTokens`, `EmailVerifications`, `PasswordResets`, `ApiKeys`.
 
 ## Design Decisions
 
@@ -120,3 +123,4 @@ Key tables: `Users`, `UserEmails`, `AuthProviders`, `PasswordCredentials`, `Sess
 | [006](docs/adr-006-soft-delete.md) | 2026-03-20 | Soft delete users instead of hard delete |
 | [007](docs/adr-007-refresh-token-rotation.md) | 2026-04-13 | Refresh Token Rotation + hash storage |
 | [008](docs/adr-008-result-pattern.md) | 2026-04-13 | Result pattern over exception-driven error handling |
+| [009](docs/adr-009-api-key-exchange.md) | 2026-04-22 | API Key issuance + exchange for short-lived JWT |

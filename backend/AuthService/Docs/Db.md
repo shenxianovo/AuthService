@@ -63,6 +63,16 @@ erDiagram
         bool Used
         UUID UserEmailId FK
     }
+    API_KEY {
+        UUID Id PK
+        string Name
+        string Prefix
+        string SecretHash
+        datetime CreatedAt
+        datetime LastUsedAt
+        bool IsRevoked
+        UUID UserId FK
+    }
 
     USER ||--o{ USER_EMAIL : ""
     USER ||--o{ AUTH_PROVIDER : ""
@@ -71,4 +81,5 @@ erDiagram
     USER ||--o{ PASSWORD_RESET : ""
     USER ||--|| PASSWORD_CREDENTIAL : ""
     USER_EMAIL ||--o{ EMAIL_VERIFICATION : ""
+    USER ||--o{ API_KEY : ""
 ```
