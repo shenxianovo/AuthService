@@ -292,6 +292,7 @@ onMounted(async () => {
       const data = await api.exchangeCode(authCode)
       applyAuthResponse(data)
       successMsg.value = 'OAuth login successful!'
+      if (externalRedirect.value) { redirectToExternal(data); return }
       await fetchUserInfo()
       authStore.transition('profile')
     } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'OAuth login failed' }
@@ -300,7 +301,16 @@ onMounted(async () => {
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
-  if (appState.value === 'profile') await fetchUserInfo()
+  if (appState.value === 'profile') {
+    if (externalRedirect.value && authStore.state.tokens) {
+      redirectToExternal({
+        accessToken: authStore.state.tokens.accessToken,
+        userId: authStore.state.tokens.userId,
+      } as AuthResponse)
+      return
+    }
+    await fetchUserInfo()
+  }
 })
 </script>
 
