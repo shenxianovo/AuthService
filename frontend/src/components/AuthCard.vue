@@ -181,7 +181,7 @@ async function handleLogin() {
   try {
     const data = await api.login(loginForm.value.email, loginForm.value.password)
     applyAuthResponse(data)
-    if (externalRedirect.value) { redirectToExternal(data); return }
+    if (externalRedirect.value) { redirectToExternal(data, data.refreshToken); return }
     await fetchUserInfo()
     authStore.transition('profile')
   } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'Login failed' }
@@ -209,12 +209,12 @@ async function handleAddPassword() {
 const currentPageUrl = () => window.location.origin + window.location.pathname
 
 const handleGithubLogin = () => {
-  const r = externalRedirect.value ?? currentPageUrl()
-  window.location.href = api.githubLoginUrl(r)
+  if (externalRedirect.value) sessionStorage.setItem('externalRedirect', externalRedirect.value)
+  window.location.href = api.githubLoginUrl(currentPageUrl())
 }
 const handleGoogleLogin = () => {
-  const r = externalRedirect.value ?? currentPageUrl()
-  window.location.href = api.googleLoginUrl(r)
+  if (externalRedirect.value) sessionStorage.setItem('externalRedirect', externalRedirect.value)
+  window.location.href = api.googleLoginUrl(currentPageUrl())
 }
 const linkedProviders = computed(() =>
   new Set((userInfo.value?.providers ?? []).map(p => p.provider?.toLowerCase()))
@@ -271,17 +271,24 @@ async function handleSetPrimaryEmail(email: string) {
   finally { loading.value = false }
 }
 
-function redirectToExternal(data: AuthResponse) {
+function redirectToExternal(data: AuthResponse, refreshToken?: string) {
+  sessionStorage.removeItem('externalRedirect')
   const url = new URL(externalRedirect.value!)
   url.searchParams.set('token', data.accessToken!)
   url.searchParams.set('userId', data.userId!.toString())
+  if (refreshToken) url.searchParams.set('refreshToken', refreshToken)
   window.location.href = url.toString()
 }
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
   const redirect = params.get('redirect')
-  if (redirect) externalRedirect.value = redirect
+  if (redirect) {
+    externalRedirect.value = redirect
+  } else {
+    const stored = sessionStorage.getItem('externalRedirect')
+    if (stored) externalRedirect.value = stored
+  }
 
   const authCode = params.get('code')
   const oauthError = params.get('error')
@@ -292,7 +299,7 @@ onMounted(async () => {
       const data = await api.exchangeCode(authCode)
       applyAuthResponse(data)
       successMsg.value = 'OAuth login successful!'
-      if (externalRedirect.value) { redirectToExternal(data); return }
+      if (externalRedirect.value) { redirectToExternal(data, data.refreshToken); return }
       await fetchUserInfo()
       authStore.transition('profile')
     } catch (e: unknown) { error.value = e instanceof Error ? e.message : 'OAuth login failed' }
@@ -306,7 +313,7 @@ onMounted(async () => {
       redirectToExternal({
         accessToken: authStore.state.tokens.accessToken,
         userId: authStore.state.tokens.userId,
-      } as AuthResponse)
+      } as AuthResponse, authStore.state.tokens.refreshToken)
       return
     }
     await fetchUserInfo()
