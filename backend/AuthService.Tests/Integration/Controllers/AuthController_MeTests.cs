@@ -20,6 +20,7 @@ namespace AuthService.Tests.Integration.Controllers
             email ??= $"me-{Guid.NewGuid():N}@example.com";
             var request = new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "MeTestUser",
                 Email = email,
                 Password = "SecurePass123",

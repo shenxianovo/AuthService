@@ -15,6 +15,7 @@ namespace AuthService.Tests.Integration.Controllers
         {
             var request = new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = $"IntTest-{Guid.NewGuid():N}",
                 Email = $"reg-{Guid.NewGuid():N}@example.com",
                 Password = "SecurePass123",
@@ -39,6 +40,7 @@ namespace AuthService.Tests.Integration.Controllers
 
             var request = new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "First",
                 Email = email,
                 Password = "SecurePass123",
@@ -49,6 +51,7 @@ namespace AuthService.Tests.Integration.Controllers
 
             var request2 = new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "Second",
                 Email = email,
                 Password = "SecurePass456",
@@ -73,6 +76,7 @@ namespace AuthService.Tests.Integration.Controllers
         {
             var request = new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "Test",
                 Email = "not-an-email",
                 Password = "SecurePass123",
@@ -88,6 +92,7 @@ namespace AuthService.Tests.Integration.Controllers
         {
             var request = new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "Test",
                 Email = $"short-{Guid.NewGuid():N}@example.com",
                 Password = "123", // less than 8 chars

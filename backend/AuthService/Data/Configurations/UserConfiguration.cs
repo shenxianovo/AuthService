@@ -10,6 +10,12 @@ namespace AuthService.Data.Configurations
         {
             builder.HasKey(u => u.Id);
 
+            builder.Property(u => u.Username)
+                .IsRequired()
+                .HasMaxLength(39);
+            builder.HasIndex(u => u.Username)
+                .IsUnique();
+
             builder.Property(u => u.DisplayName)
                 .IsRequired()
                 .HasMaxLength(128);

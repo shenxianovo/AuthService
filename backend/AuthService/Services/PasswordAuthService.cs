@@ -21,12 +21,25 @@ namespace AuthService.Services
     {
         public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, string ipAddress, string device)
         {
+            var username = request.Username.ToLowerInvariant();
+
+            if (!UsernameValidator.IsValid(username))
+                return Result<AuthResponse>.Fail(AuthError.InvalidUsername);
+
             var emailExists = await db.UserEmails
                 .AnyAsync(e => e.Email == request.Email.ToLowerInvariant());
             if (emailExists)
                 return Result<AuthResponse>.Fail(AuthError.EmailAlreadyExists);
 
-            var user = new User { DisplayName = request.DisplayName };
+            var usernameExists = await db.Users.AnyAsync(u => u.Username == username);
+            if (usernameExists)
+                return Result<AuthResponse>.Fail(AuthError.UsernameAlreadyExists);
+
+            var user = new User
+            {
+                Username = username,
+                DisplayName = request.DisplayName,
+            };
 
             db.Users.Add(user);
             db.UserEmails.Add(new UserEmail
@@ -49,7 +62,7 @@ namespace AuthService.Services
 
             await db.SaveChangesAsync();
 
-            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            return await sessionService.CreateSessionAsync(user, ipAddress, device);
         }
 
         public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, string ipAddress, string device)
@@ -86,7 +99,7 @@ namespace AuthService.Services
             if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
                 credential.PasswordHash = passwordHasher.HashPassword(user, request.Password);
 
-            return await sessionService.CreateSessionAsync(user.Id, ipAddress, device);
+            return await sessionService.CreateSessionAsync(user, ipAddress, device);
         }
 
         public async Task<Result> AddPasswordAsync(Guid userId, string password)

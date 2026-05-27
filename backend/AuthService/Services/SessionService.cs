@@ -5,6 +5,7 @@ using AuthService.Entities;
 using AuthService.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
@@ -12,7 +13,7 @@ namespace AuthService.Services
 {
     public interface ISessionService
     {
-        Task<Result<AuthResponse>> CreateSessionAsync(Guid userId, string ipAddress, string device);
+        Task<Result<AuthResponse>> CreateSessionAsync(User user, string ipAddress, string device);
         Task<Result<AuthResponse>> RefreshSessionAsync(string refreshToken);
         Task RevokeSessionAsync(Guid sessionId);
     }
@@ -22,13 +23,13 @@ namespace AuthService.Services
         private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
         public async Task<Result<AuthResponse>> CreateSessionAsync(
-            Guid userId,
+            User user,
             string ipAddress,
             string device)
         {
             var session = new Session
             {
-                UserId = userId,
+                UserId = user.Id,
                 Device = device,
                 IpAddress = ipAddress,
                 ExpiresAt = DateTimeOffset.UtcNow.AddDays(_jwtOptions.SessionExpirationDays),
@@ -48,11 +49,15 @@ namespace AuthService.Services
 
             await db.SaveChangesAsync();
 
-            var accessToken = jwtService.GenerateAccessToken(userId, new Claim("sid", session.Id.ToString()));
+            var accessToken = jwtService.GenerateAccessToken(
+                user.Id,
+                new Claim("sid", session.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.PreferredUsername, user.Username));
 
             return Result<AuthResponse>.Ok(new AuthResponse
             {
-                UserId = userId,
+                UserId = user.Id,
+                Username = user.Username,
                 AccessToken = accessToken,
                 RefreshToken = rawToken,
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),
@@ -93,11 +98,16 @@ namespace AuthService.Services
             await db.SaveChangesAsync();
 
             var session = existing.Session;
-            var accessToken = jwtService.GenerateAccessToken(session.UserId, new Claim("sid", session.Id.ToString()));
+            var user = session.User;
+            var accessToken = jwtService.GenerateAccessToken(
+                user.Id,
+                new Claim("sid", session.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.PreferredUsername, user.Username));
 
             return Result<AuthResponse>.Ok(new AuthResponse
             {
-                UserId = session.UserId,
+                UserId = user.Id,
+                Username = user.Username,
                 AccessToken = accessToken,
                 RefreshToken = newRawToken,
                 ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.AccessTokenExpirationMinutes),

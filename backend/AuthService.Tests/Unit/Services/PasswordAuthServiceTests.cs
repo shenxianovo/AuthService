@@ -43,6 +43,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var request = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test User",
                 Email = "test@example.com",
                 Password = "SecurePass123",
@@ -88,6 +89,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var request = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test",
                 Email = "Test@EXAMPLE.COM",
                 Password = "SecurePass123",
@@ -105,6 +107,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var request = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test",
                 Email = "test@example.com",
                 Password = "SecurePass123",
@@ -124,6 +127,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var registerRequest = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test",
                 Email = "test@example.com",
                 Password = "SecurePass123",
@@ -150,6 +154,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var registerRequest = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test",
                 Email = "test@example.com",
                 Password = "SecurePass123",
@@ -186,6 +191,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var registerRequest = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test",
                 Email = "test@example.com",
                 Password = "SecurePass123",
@@ -212,6 +218,7 @@ namespace AuthService.Tests.Unit.Services
         {
             var registerRequest = new RegisterRequest
             {
+                Username = "testuser",
                 DisplayName = "Test",
                 Email = "test@example.com",
                 Password = "SecurePass123",

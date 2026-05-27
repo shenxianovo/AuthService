@@ -65,6 +65,7 @@ namespace AuthService.Common
 
         // 409 Conflict
         EmailAlreadyExists,
+        UsernameAlreadyExists,
 
         // 400 Bad Request
         UserNotFound,
@@ -72,6 +73,7 @@ namespace AuthService.Common
         InvalidAuthCode,
         InvalidOAuthState,
         InvalidRedirectUrl,
+        InvalidUsername,
 
         // 401 Unauthorized
         InvalidCredentials,

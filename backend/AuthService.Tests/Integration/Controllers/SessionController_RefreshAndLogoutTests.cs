@@ -16,6 +16,7 @@ namespace AuthService.Tests.Integration.Controllers
             var email = $"session-{Guid.NewGuid():N}@example.com";
             var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "SessionTestUser",
                 Email = email,
                 Password = "SecurePass123",

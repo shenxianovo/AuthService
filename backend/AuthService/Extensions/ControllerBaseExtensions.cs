@@ -16,6 +16,9 @@ namespace AuthService.Extensions
                 AuthError.EmailAlreadyExists =>
                     controller.Conflict(new { message = message ?? "Email already registered." }),
 
+                AuthError.UsernameAlreadyExists =>
+                    controller.Conflict(new { message = message ?? "Username already taken." }),
+
                 AuthError.UserNotFound =>
                     controller.BadRequest(new { message = message ?? "User not found." }),
 
@@ -30,6 +33,9 @@ namespace AuthService.Extensions
 
                 AuthError.InvalidRedirectUrl =>
                     controller.BadRequest(new { message = message ?? "Redirect URL is not allowed." }),
+
+                AuthError.InvalidUsername =>
+                    controller.BadRequest(new { message = message ?? "Username format is invalid or reserved." }),
 
                 AuthError.InvalidCredentials =>
                     controller.Unauthorized(new { message = message ?? "Invalid credentials." }),

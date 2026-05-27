@@ -103,7 +103,11 @@ namespace AuthService.Services
                     }
                     else
                     {
-                        user = new User { DisplayName = displayName };
+                        user = new User
+                        {
+                            DisplayName = displayName,
+                        };
+                        user.Username = $"user-{user.Id.ToString("N")[..8]}";
                         db.Users.Add(user);
 
                         if (!string.IsNullOrEmpty(email))

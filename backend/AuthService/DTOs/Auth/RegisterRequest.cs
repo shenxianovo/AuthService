@@ -5,6 +5,11 @@ namespace AuthService.DTOs.Auth
     public class RegisterRequest
     {
         [Required]
+        [MinLength(3)]
+        [MaxLength(39)]
+        public string Username { get; set; } = null!;
+
+        [Required]
         [MaxLength(128)]
         public string DisplayName { get; set; } = null!;
 

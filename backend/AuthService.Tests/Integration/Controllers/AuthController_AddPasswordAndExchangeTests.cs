@@ -63,6 +63,7 @@ namespace AuthService.Tests.Integration.Controllers
             var email = $"addpwd-dup-{Guid.NewGuid():N}@example.com";
             var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
             {
+                Username = $"u{Guid.NewGuid():N}"[..15],
                 DisplayName = "HasPassword",
                 Email = email,
                 Password = "ExistingPass123",
