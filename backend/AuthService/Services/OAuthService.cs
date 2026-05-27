@@ -7,12 +7,12 @@ namespace AuthService.Services
 {
     public interface IOAuthService
     {
-        Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null);
+        Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null, string? providerLogin = null);
     }
 
     public class OAuthService(AppDbContext db) : IOAuthService
     {
-        public async Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null)
+        public async Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null, string? providerLogin = null)
         {
             var authProvider = await db.AuthProviders
                 .Include(a => a.User)
@@ -103,11 +103,16 @@ namespace AuthService.Services
                     }
                     else
                     {
+                        var username = await UsernameGenerator.GenerateUniqueAsync(
+                            providerLogin,
+                            email,
+                            u => db.Users.AnyAsync(x => x.Username == u));
+
                         user = new User
                         {
+                            Username = username,
                             DisplayName = displayName,
                         };
-                        user.Username = $"user-{user.Id.ToString("N")[..8]}";
                         db.Users.Add(user);
 
                         if (!string.IsNullOrEmpty(email))

@@ -11,7 +11,8 @@ namespace AuthService.Services
     public record OAuthUserInfo(
         string ProviderUserId,
         string? Email,
-        string DisplayName
+        string DisplayName,
+        string? ProviderLogin = null
     );
 
     /// <summary>
@@ -52,7 +53,8 @@ namespace AuthService.Services
                 userInfo.ProviderUserId,
                 userInfo.Email,
                 userInfo.DisplayName,
-                currentUserId);
+                currentUserId,
+                userInfo.ProviderLogin);
 
             if (!userResult.IsSuccess)
                 return Result<AuthResponse>.Fail(userResult.Error, userResult.ErrorMessage);
