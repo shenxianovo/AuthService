@@ -88,5 +88,15 @@ namespace AuthService.Common
         // 400/401 – API Key
         ApiKeyNotFound,
         InvalidApiKey,
+
+        // 400 – Email
+        EmailNotFound,
+        CannotRemovePrimaryEmail,
+        EmailNotVerified,
+        EmailAlreadyVerified,
+        InvalidVerificationCode,
+
+        // 429 – Rate limit
+        VerificationRateLimited,
     }
 }

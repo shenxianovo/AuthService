@@ -1,5 +1,4 @@
 using AuthService.DTOs.Auth;
-using AuthService.Exceptions;
 using AuthService.Extensions;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -44,14 +43,15 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> SendVerificationCode([FromQuery] string? email = null)
         {
             if (email is not null && !IsValidEmail(email))
-                return BadRequest(new { message = "邮箱格式不正确。" });
+                return BadRequest(new { message = "Invalid email format." });
 
             var userId = GetCurrentUserId();
-            await emailVerificationService.SendVerificationCodeAsync(userId, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
-            return Ok(new { message = "验证码已发送。" });
+            var result = await emailVerificationService.SendVerificationCodeAsync(userId, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
+            return result.IsSuccess ? Ok(new { message = "Verification code sent." }) : this.ToErrorResponse(result.Error);
         }
 
         [Authorize]
@@ -62,11 +62,11 @@ namespace AuthService.Controllers
         public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, [FromQuery] string? email = null)
         {
             if (email is not null && !IsValidEmail(email))
-                return BadRequest(new { message = "邮箱格式不正确。" });
+                return BadRequest(new { message = "Invalid email format." });
 
             var userId = GetCurrentUserId();
-            await emailVerificationService.VerifyCodeAsync(userId, request.Code, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
-            return Ok(new { message = "邮箱验证成功。" });
+            var result = await emailVerificationService.VerifyCodeAsync(userId, request.Code, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
+            return result.IsSuccess ? Ok(new { message = "Email verified." }) : this.ToErrorResponse(result.Error);
         }
 
         [Authorize]
@@ -77,8 +77,8 @@ namespace AuthService.Controllers
         public async Task<IActionResult> AddEmail([FromBody] AddEmailRequest request)
         {
             var userId = GetCurrentUserId();
-            await emailManagementService.AddEmailAsync(userId, request.Email);
-            return Ok(new { message = "邮箱已添加，请查收验证码。" });
+            var result = await emailManagementService.AddEmailAsync(userId, request.Email);
+            return result.IsSuccess ? Ok(new { message = "Email added. Verification code sent." }) : this.ToErrorResponse(result.Error);
         }
 
         [Authorize]
@@ -88,11 +88,11 @@ namespace AuthService.Controllers
         public async Task<IActionResult> RemoveEmail(string email)
         {
             if (!IsValidEmail(email))
-                return BadRequest(new { message = "邮箱格式不正确。" });
+                return BadRequest(new { message = "Invalid email format." });
 
             var userId = GetCurrentUserId();
-            await emailManagementService.RemoveEmailAsync(userId, email);
-            return Ok(new { message = "邮箱已删除。" });
+            var result = await emailManagementService.RemoveEmailAsync(userId, email);
+            return result.IsSuccess ? Ok(new { message = "Email removed." }) : this.ToErrorResponse(result.Error);
         }
 
         [Authorize]
@@ -102,18 +102,18 @@ namespace AuthService.Controllers
         public async Task<IActionResult> SetPrimaryEmail(string email)
         {
             if (!IsValidEmail(email))
-                return BadRequest(new { message = "邮箱格式不正确。" });
+                return BadRequest(new { message = "Invalid email format." });
 
             var userId = GetCurrentUserId();
-            await emailManagementService.SetPrimaryEmailAsync(userId, email);
-            return Ok(new { message = "主邮箱已更新。" });
+            var result = await emailManagementService.SetPrimaryEmailAsync(userId, email);
+            return result.IsSuccess ? Ok(new { message = "Primary email updated." }) : this.ToErrorResponse(result.Error);
         }
 
         private Guid GetCurrentUserId()
         {
             var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
                 ?? User.FindFirstValue("sub")
-                ?? throw new UnauthorizedException("未登录或令牌无效。");
+                ?? throw new InvalidOperationException("Missing user ID claim in authenticated request.");
             return Guid.Parse(sub);
         }
 

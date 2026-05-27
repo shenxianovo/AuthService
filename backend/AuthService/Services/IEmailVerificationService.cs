@@ -1,8 +1,10 @@
+using AuthService.Common;
+
 namespace AuthService.Services
 {
     public interface IEmailVerificationService
     {
-        Task SendVerificationCodeAsync(Guid userId, EmailTarget? target = null);
-        Task VerifyCodeAsync(Guid userId, string code, EmailTarget? target = null);
+        Task<Result> SendVerificationCodeAsync(Guid userId, EmailTarget? target = null);
+        Task<Result> VerifyCodeAsync(Guid userId, string code, EmailTarget? target = null);
     }
 }

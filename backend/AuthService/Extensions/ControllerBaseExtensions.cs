@@ -61,6 +61,24 @@ namespace AuthService.Extensions
                 AuthError.InvalidApiKey =>
                     controller.Unauthorized(new { message = message ?? "Invalid API key." }),
 
+                AuthError.EmailNotFound =>
+                    controller.BadRequest(new { message = message ?? "Email not found." }),
+
+                AuthError.CannotRemovePrimaryEmail =>
+                    controller.BadRequest(new { message = message ?? "Cannot remove primary email. Set another email as primary first." }),
+
+                AuthError.EmailNotVerified =>
+                    controller.BadRequest(new { message = message ?? "Email is not verified." }),
+
+                AuthError.EmailAlreadyVerified =>
+                    controller.BadRequest(new { message = message ?? "Email is already verified." }),
+
+                AuthError.InvalidVerificationCode =>
+                    controller.BadRequest(new { message = message ?? "Invalid or expired verification code." }),
+
+                AuthError.VerificationRateLimited =>
+                    new ObjectResult(new { message = message ?? "Please try again later." }) { StatusCode = StatusCodes.Status429TooManyRequests },
+
                 _ => controller.BadRequest(new { message = message ?? "An error occurred." })
             };
         }

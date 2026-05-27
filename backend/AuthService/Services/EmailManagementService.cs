@@ -1,6 +1,6 @@
+using AuthService.Common;
 using AuthService.Data;
 using AuthService.Entities;
-using AuthService.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Services
@@ -9,7 +9,7 @@ namespace AuthService.Services
         AppDbContext db,
         IEmailVerificationService emailVerificationService) : IEmailManagementService
     {
-        public async Task AddEmailAsync(Guid userId, string email)
+        public async Task<Result> AddEmailAsync(Guid userId, string email)
         {
             var normalizedEmail = email.Trim().ToLower();
 
@@ -17,7 +17,7 @@ namespace AuthService.Services
                 .AnyAsync(e => e.Email == normalizedEmail);
 
             if (exists)
-                throw new ConflictException("该邮箱已被使用。");
+                return Result.Fail(AuthError.EmailAlreadyExists);
 
             var userEmail = new UserEmail
             {
@@ -31,34 +31,43 @@ namespace AuthService.Services
             db.Set<UserEmail>().Add(userEmail);
             await db.SaveChangesAsync();
 
-            await emailVerificationService.SendVerificationCodeAsync(userId, EmailTarget.ById(userEmail.Id));
+            var sendResult = await emailVerificationService.SendVerificationCodeAsync(userId, EmailTarget.ById(userEmail.Id));
+            if (!sendResult.IsSuccess)
+                return sendResult;
+
+            return Result.Ok();
         }
 
-        public async Task RemoveEmailAsync(Guid userId, string email)
+        public async Task<Result> RemoveEmailAsync(Guid userId, string email)
         {
             var normalizedEmail = email.Trim().ToLower();
 
             var userEmail = await db.Set<UserEmail>()
-                .FirstOrDefaultAsync(e => e.Email == normalizedEmail && e.UserId == userId)
-                ?? throw new BusinessException("邮箱不存在。");
+                .FirstOrDefaultAsync(e => e.Email == normalizedEmail && e.UserId == userId);
+
+            if (userEmail is null)
+                return Result.Fail(AuthError.EmailNotFound);
 
             if (userEmail.IsPrimary)
-                throw new BusinessException("不能删除主邮箱，请先设置其他邮箱为主邮箱。");
+                return Result.Fail(AuthError.CannotRemovePrimaryEmail);
 
             db.Set<UserEmail>().Remove(userEmail);
             await db.SaveChangesAsync();
+            return Result.Ok();
         }
 
-        public async Task SetPrimaryEmailAsync(Guid userId, string email)
+        public async Task<Result> SetPrimaryEmailAsync(Guid userId, string email)
         {
             var normalizedEmail = email.Trim().ToLower();
 
             var userEmail = await db.Set<UserEmail>()
-                .FirstOrDefaultAsync(e => e.Email == normalizedEmail && e.UserId == userId)
-                ?? throw new BusinessException("邮箱不存在。");
+                .FirstOrDefaultAsync(e => e.Email == normalizedEmail && e.UserId == userId);
+
+            if (userEmail is null)
+                return Result.Fail(AuthError.EmailNotFound);
 
             if (userEmail.VerifiedAt == null)
-                throw new BusinessException("只能将已验证的邮箱设为主邮箱。");
+                return Result.Fail(AuthError.EmailNotVerified);
 
             var currentPrimary = await db.Set<UserEmail>()
                 .FirstOrDefaultAsync(e => e.UserId == userId && e.IsPrimary);
@@ -68,6 +77,7 @@ namespace AuthService.Services
 
             userEmail.IsPrimary = true;
             await db.SaveChangesAsync();
+            return Result.Ok();
         }
     }
 }
