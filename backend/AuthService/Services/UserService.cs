@@ -1,6 +1,7 @@
 using AuthService.Common;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
+using AuthService.DTOs.User;
 using AuthService.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ namespace AuthService.Services
     public interface IUserService
     {
         Task<UserInfoResponse?> GetUserInfoAsync(Guid userId);
+        Task<PublicUserResponse?> GetPublicUserByUsernameAsync(string username);
         Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider);
     }
 
@@ -46,6 +48,22 @@ namespace AuthService.Services
                         LinkedAt = p.CreatedAt
                     }).ToList()
             };
+        }
+
+        public async Task<PublicUserResponse?> GetPublicUserByUsernameAsync(string username)
+        {
+            var normalized = username.ToLowerInvariant();
+            var user = await db.Users
+                .Where(u => !u.IsDeleted && u.Username == normalized)
+                .Select(u => new PublicUserResponse
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    DisplayName = u.DisplayName,
+                })
+                .FirstOrDefaultAsync();
+
+            return user;
         }
 
         public async Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider)
