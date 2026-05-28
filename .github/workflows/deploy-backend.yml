@@ -23,11 +23,17 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+
       - name: Test
         run: dotnet test --no-restore --configuration Release
 
       - name: Publish
         run: dotnet publish AuthService/AuthService.csproj -c Release -o ../publish --no-restore
+
+      - name: Build migration bundle
+        run: dotnet ef migrations bundle --project AuthService/AuthService.csproj -o ../publish/efbundle --self-contained --force
 
       - uses: actions/upload-artifact@v4
         with:
@@ -61,6 +67,17 @@ jobs:
           source: "deploy/backend/*"
           target: /srv/AuthService/releases/${{ github.run_id }}
           strip_components: 2
+
+      - name: Apply database migrations
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /srv/AuthService/releases/${{ github.run_id }}
+            chmod +x efbundle
+            ./efbundle --connection "${{ secrets.DB_CONNECTION_STRING }}"
 
       - name: Switch & restart
         uses: appleboy/ssh-action@v1
