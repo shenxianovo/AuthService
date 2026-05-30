@@ -57,17 +57,16 @@ namespace AuthService.Common
 
     /// <summary>
     /// Typed error codes for all business-level failures in AuthService.
-    /// Each code maps to a specific HTTP status code in the Controller layer.
+    /// HTTP status + default message for each code live in AuthErrorHttp (a single
+    /// map); AuthErrorHttpMappingTests guarantees every code has an entry.
     /// </summary>
     public enum AuthError
     {
         None = 0,
 
-        // 409 Conflict
         EmailAlreadyExists,
         UsernameAlreadyExists,
 
-        // 400 Bad Request
         UserNotFound,
         PasswordAlreadySet,
         InvalidAuthCode,
@@ -75,28 +74,23 @@ namespace AuthService.Common
         InvalidRedirectUrl,
         InvalidUsername,
 
-        // 401 Unauthorized
         InvalidCredentials,
         InvalidRefreshToken,
         UserDeleted,
         UserNotFoundForMerge,
 
-        // 400 Bad Request – unlink
         CannotUnlinkLastLoginMethod,
         ProviderNotLinked,
 
-        // 400/401 – API Key
         ApiKeyNotFound,
         InvalidApiKey,
 
-        // 400 – Email
         EmailNotFound,
         CannotRemovePrimaryEmail,
         EmailNotVerified,
         EmailAlreadyVerified,
         InvalidVerificationCode,
 
-        // 429 – Rate limit
         VerificationRateLimited,
     }
 }
