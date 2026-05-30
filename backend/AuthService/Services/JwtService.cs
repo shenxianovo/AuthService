@@ -21,18 +21,11 @@ namespace AuthService.Services
         private readonly RSA _privateKey;
         private readonly RSA _publicKey;
 
-        public JwtService(IOptions<JwtOptions> options)
+        public JwtService(IOptions<JwtOptions> options, IRsaKeyProvider keyProvider)
         {
             _options = options.Value;
-
-            var privateKeyPem = File.ReadAllText(_options.PrivateKeyPath);
-            var publicKeyPem = File.ReadAllText(_options.PublicKeyPath);
-
-            _privateKey = RSA.Create();
-            _privateKey.ImportFromPem(privateKeyPem);
-
-            _publicKey = RSA.Create();
-            _publicKey.ImportFromPem(publicKeyPem);
+            _privateKey = keyProvider.PrivateKey;
+            _publicKey = keyProvider.PublicKey;
         }
 
         public string GenerateAccessToken(Guid userId, params Claim[] extraClaims)

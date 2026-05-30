@@ -1,33 +1,23 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using AuthService.Configuration;
 using AuthService.Services;
+using AuthService.Tests.Fixtures;
 using Microsoft.Extensions.Options;
 
 namespace AuthService.Tests.Unit.Services
 {
-    public class JwtServiceTests : IDisposable
+    public class JwtServiceTests
     {
         private readonly JwtService _sut;
-        private readonly string _tempKeyDir;
         private readonly JwtOptions _options;
 
         public JwtServiceTests()
         {
-            _tempKeyDir = Path.Combine(Path.GetTempPath(), $"jwt-test-keys-{Guid.NewGuid()}");
-            Directory.CreateDirectory(_tempKeyDir);
-
-            using var rsa = RSA.Create(2048);
-            var privateKeyPath = Path.Combine(_tempKeyDir, "private.pem");
-            var publicKeyPath = Path.Combine(_tempKeyDir, "public.pem");
-            File.WriteAllText(privateKeyPath, rsa.ExportRSAPrivateKeyPem());
-            File.WriteAllText(publicKeyPath, rsa.ExportRSAPublicKeyPem());
-
             _options = new JwtOptions
             {
-                PrivateKeyPath = privateKeyPath,
-                PublicKeyPath = publicKeyPath,
+                PrivateKeyPath = "unused",
+                PublicKeyPath = "unused",
                 Issuer = "test-issuer",
                 Audience = "test-audience",
                 AccessTokenExpirationMinutes = 15,
@@ -35,13 +25,7 @@ namespace AuthService.Tests.Unit.Services
                 SessionExpirationDays = 30,
             };
 
-            _sut = new JwtService(Options.Create(_options));
-        }
-
-        public void Dispose()
-        {
-            if (Directory.Exists(_tempKeyDir))
-                Directory.Delete(_tempKeyDir, recursive: true);
+            _sut = new JwtService(Options.Create(_options), new InMemoryRsaKeyProvider());
         }
 
         [Fact]
@@ -126,34 +110,13 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public void ValidateTokenAndGetUserId_WithTokenFromDifferentKey_ReturnsNull()
         {
-            // Create another JwtService with different keys
-            var otherKeyDir = Path.Combine(Path.GetTempPath(), $"jwt-test-keys-other-{Guid.NewGuid()}");
-            Directory.CreateDirectory(otherKeyDir);
-
-            using var rsa = RSA.Create(2048);
-            var otherPrivateKeyPath = Path.Combine(otherKeyDir, "private.pem");
-            var otherPublicKeyPath = Path.Combine(otherKeyDir, "public.pem");
-            File.WriteAllText(otherPrivateKeyPath, rsa.ExportRSAPrivateKeyPem());
-            File.WriteAllText(otherPublicKeyPath, rsa.ExportRSAPublicKeyPem());
-
-            var otherOptions = new JwtOptions
-            {
-                PrivateKeyPath = otherPrivateKeyPath,
-                PublicKeyPath = otherPublicKeyPath,
-                Issuer = "test-issuer",
-                Audience = "test-audience",
-                AccessTokenExpirationMinutes = 15,
-            };
-
-            var otherService = new JwtService(Options.Create(otherOptions));
+            // A service with a different key pair must reject this service's tokens.
+            var otherService = new JwtService(Options.Create(_options), new InMemoryRsaKeyProvider());
             var tokenFromOther = otherService.GenerateAccessToken(Guid.NewGuid(), new Claim("sid", Guid.NewGuid().ToString()));
 
-            // Validate with original service's key �?should fail
             var result = _sut.ValidateTokenAndGetUserId(tokenFromOther);
 
             Assert.Null(result);
-
-            Directory.Delete(otherKeyDir, recursive: true);
         }
 
         [Fact]

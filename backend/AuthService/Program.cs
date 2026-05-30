@@ -52,6 +52,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // JWT
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.Section));
+builder.Services.AddSingleton<IRsaKeyProvider, PemFileRsaKeyProvider>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 
 // Github OAuth

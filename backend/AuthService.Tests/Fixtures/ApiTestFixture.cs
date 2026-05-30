@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using System.Security.Cryptography;
 using AuthService.Data;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -14,20 +13,9 @@ namespace AuthService.Tests.Fixtures
     {
         public HttpClient Client { get; private set; } = null!;
         public WebApplicationFactory<Program> Factory { get; private set; } = null!;
-        private string _tempKeyDir = null!;
 
         public async ValueTask InitializeAsync()
         {
-            // Generate a test RSA key pair and write to temp files
-            _tempKeyDir = Path.Combine(Path.GetTempPath(), $"authservice-test-keys-{Guid.NewGuid()}");
-            Directory.CreateDirectory(_tempKeyDir);
-
-            using var rsa = RSA.Create(2048);
-            var privateKeyPath = Path.Combine(_tempKeyDir, "private.pem");
-            var publicKeyPath = Path.Combine(_tempKeyDir, "public.pem");
-            File.WriteAllText(privateKeyPath, rsa.ExportRSAPrivateKeyPem());
-            File.WriteAllText(publicKeyPath, rsa.ExportRSAPublicKeyPem());
-
             Factory = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
@@ -35,8 +23,6 @@ namespace AuthService.Tests.Fixtures
                     {
                         config.AddInMemoryCollection(new Dictionary<string, string?>
                         {
-                            ["Jwt:PrivateKeyPath"] = privateKeyPath,
-                            ["Jwt:PublicKeyPath"] = publicKeyPath,
                             ["Jwt:Issuer"] = "test-issuer",
                             ["Jwt:Audience"] = "test-audience",
                             ["Jwt:AccessTokenExpirationMinutes"] = "15",
@@ -50,6 +36,12 @@ namespace AuthService.Tests.Fixtures
 
                     builder.ConfigureServices(services =>
                     {
+                        // Replace the file-based key provider with an in-memory one
+                        // (no temp PEM files needed for tests).
+                        var keyDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IRsaKeyProvider));
+                        if (keyDescriptor != null) services.Remove(keyDescriptor);
+                        services.AddSingleton<IRsaKeyProvider, InMemoryRsaKeyProvider>();
+
                         // Remove all DbContext and EF Core related registrations
                         var efServiceTypes = services
                             .Where(d => d.ServiceType.FullName != null &&
@@ -101,8 +93,6 @@ namespace AuthService.Tests.Fixtures
         {
             Client.Dispose();
             await Factory.DisposeAsync();
-            if (Directory.Exists(_tempKeyDir))
-                Directory.Delete(_tempKeyDir, recursive: true);
         }
     }
 
