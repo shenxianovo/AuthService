@@ -1,6 +1,6 @@
 # ADR-003: OAuth Login User Merge Strategy
 
-## Status: Accepted
+## Status: Accepted (data-migration scope superseded by [ADR-010](adr-010-account-composition-service.md))
 
 ## Date: 2026-03-20
 
@@ -35,4 +35,5 @@ Implement **user merge** when binding triggers a conflict:
 
 ## References
 
-- [`OAuthService.cs`](../backend/AuthService/Services/OAuthService.cs) — `ProcessOAuthLoginAsync`, `MergeUserAsync`
+- [`AccountService.cs`](../backend/AuthService/Services/AccountService.cs) — `MergeAsync` (moved here from OAuthService per ADR-010)
+- [`OAuthService.cs`](../backend/AuthService/Services/OAuthService.cs) — `ProcessOAuthLoginAsync` decides when to merge

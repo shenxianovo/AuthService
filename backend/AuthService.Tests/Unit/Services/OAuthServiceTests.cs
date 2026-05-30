@@ -6,320 +6,195 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Tests.Unit.Services
 {
+    /// <summary>
+    /// Decision-layer tests for OAuthService. OAuthService queries the real DB to
+    /// resolve which account a login maps to, then delegates the write to
+    /// IAccountService. These tests use a recording fake to assert WHICH action was
+    /// dispatched (create / link / merge) without exercising the write internals —
+    /// those are covered by AccountServiceTests.
+    /// </summary>
     public class OAuthServiceTests : DbTestBase
     {
+        private readonly RecordingAccountService _account;
         private readonly OAuthService _sut;
 
         public OAuthServiceTests()
         {
-            _sut = new OAuthService(Db);
+            _account = new RecordingAccountService(Db);
+            _sut = new OAuthService(Db, _account);
         }
-
-        // ===================== New User Creation =====================
+        // APPEND_MARKER
 
         [Fact]
-        public async Task ProcessOAuth_NewProvider_NewEmail_CreatesNewUser()
+        public async Task NewProvider_NewEmail_DispatchesCreate()
         {
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-123", "user@example.com", "TestUser");
+                AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
 
             Assert.True(result.IsSuccess);
+            Assert.Contains(nameof(RecordingAccountService.CreateFromOAuthAsync), _account.Calls);
             Assert.Equal("TestUser", result.Value.DisplayName);
-
-            var provider = await Db.AuthProviders.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-            Assert.NotNull(provider);
-            Assert.Equal(AuthProviderType.Github, provider.Provider);
-            Assert.Equal("github-123", provider.ProviderUserId);
-            Assert.Equal(result.Value.Id, provider.UserId);
-
-            var email = await Db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-            Assert.NotNull(email);
-            Assert.Equal("user@example.com", email.Email);
-            Assert.True(email.IsPrimary);
-            Assert.Equal(result.Value.Id, email.UserId);
         }
 
         [Fact]
-        public async Task ProcessOAuth_NewProvider_NullEmail_CreatesUserWithoutEmail()
-        {
-            var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-456", null, "NoEmailUser");
-
-            Assert.True(result.IsSuccess);
-            Assert.Equal("NoEmailUser", result.Value.DisplayName);
-
-            var emails = await Db.UserEmails.CountAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(0, emails);
-
-            var provider = await Db.AuthProviders.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-            Assert.NotNull(provider);
-            Assert.Equal(result.Value.Id, provider.UserId);
-        }
-
-        // ===================== Existing Provider Login =====================
-
-        [Fact]
-        public async Task ProcessOAuth_ExistingProvider_ReturnsExistingUser()
+        public async Task ExistingProvider_DispatchesNothing_ReturnsSameUser()
         {
             var first = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-123", "user@example.com", "TestUser");
+                AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
+            _account.Calls.Clear();
 
             var second = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-123", "user@example.com", "TestUser");
+                AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
 
-            Assert.True(first.IsSuccess);
-            Assert.True(second.IsSuccess);
             Assert.Equal(first.Value.Id, second.Value.Id);
-
-            var userCount = await Db.Users.CountAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(1, userCount);
+            Assert.Empty(_account.Calls); // straight login, no write dispatched
+            Assert.Equal(1, await Db.Users.CountAsync(TestContext.Current.CancellationToken));
         }
 
         [Fact]
-        public async Task ProcessOAuth_ExistingProvider_DeletedUser_ReturnsUserDeleted()
+        public async Task ExistingProvider_DeletedUser_ReturnsUserDeleted()
         {
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-123", "user@example.com", "TestUser");
-
-            Assert.True(result.IsSuccess);
+                AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
             result.Value.IsDeleted = true;
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var second = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-123", "user@example.com", "TestUser");
+                AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
 
             Assert.False(second.IsSuccess);
             Assert.Equal(AuthError.UserDeleted, second.Error);
         }
 
-        // ===================== Email-based User Matching =====================
-
         [Fact]
-        public async Task ProcessOAuth_NewProvider_ExistingEmail_LinksToExistingUser()
+        public async Task NewProvider_ExistingEmail_DispatchesLinkToExistingUser()
         {
-            var existingUser = new User { DisplayName = "Existing" };
-            Db.Users.Add(existingUser);
-            Db.UserEmails.Add(new UserEmail { UserId = existingUser.Id, Email = "shared@example.com", IsPrimary = true });
+            var existing = new User { DisplayName = "Existing" };
+            Db.Users.Add(existing);
+            Db.UserEmails.Add(new UserEmail { UserId = existing.Id, Email = "shared@example.com", IsPrimary = true });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-789", "shared@example.com", "GithubUser");
+                AuthProviderType.Github, "gh-789", "shared@example.com", "GithubUser");
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(existingUser.Id, result.Value.Id);
-
-            var providers = await Db.AuthProviders.Where(p => p.UserId == existingUser.Id).ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Single(providers);
-            Assert.Equal(AuthProviderType.Github, providers[0].Provider);
+            Assert.Equal(existing.Id, result.Value.Id);
+            Assert.Contains(nameof(RecordingAccountService.AddProviderAsync), _account.Calls);
         }
 
         [Fact]
-        public async Task ProcessOAuth_NewProvider_ExistingEmail_DeletedUser_ReturnsUserDeleted()
+        public async Task NewProvider_ExistingEmail_DeletedUser_ReturnsUserDeleted()
         {
-            var existingUser = new User { DisplayName = "Deleted", IsDeleted = true };
-            Db.Users.Add(existingUser);
-            Db.UserEmails.Add(new UserEmail { UserId = existingUser.Id, Email = "deleted@example.com", IsPrimary = true });
+            var deleted = new User { DisplayName = "Deleted", IsDeleted = true };
+            Db.Users.Add(deleted);
+            Db.UserEmails.Add(new UserEmail { UserId = deleted.Id, Email = "deleted@example.com", IsPrimary = true });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-000", "deleted@example.com", "GithubUser");
+                AuthProviderType.Github, "gh-000", "deleted@example.com", "GithubUser");
 
             Assert.False(result.IsSuccess);
             Assert.Equal(AuthError.UserDeleted, result.Error);
         }
 
-        // ===================== Binding (currentUserId provided) =====================
+        [Fact]
+        public async Task NormalizesEmailToLowerCase()
+        {
+            await _sut.ProcessOAuthLoginAsync(
+                AuthProviderType.Github, "gh-case", "USER@EXAMPLE.COM", "TestUser");
+
+            var email = await Db.UserEmails.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.Equal("user@example.com", email.Email);
+        }
+        // APPEND_MARKER2
+
+        // ==================== Binding (currentUserId provided) ====================
 
         [Fact]
-        public async Task ProcessOAuth_Binding_NewProvider_LinksProviderToCurrentUser()
+        public async Task Binding_NewProvider_DispatchesLinkToCurrentUser()
         {
-            var currentUser = new User { DisplayName = "CurrentUser" };
-            Db.Users.Add(currentUser);
+            var current = new User { DisplayName = "Current" };
+            Db.Users.Add(current);
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Google, "google-123", "google@example.com", "GoogleUser",
-                currentUserId: currentUser.Id);
+                AuthProviderType.Google, "gl-123", "google@example.com", "GoogleUser",
+                currentUserId: current.Id);
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(currentUser.Id, result.Value.Id);
-
-            var provider = await Db.AuthProviders.FirstOrDefaultAsync(p => p.UserId == currentUser.Id, TestContext.Current.CancellationToken);
-            Assert.NotNull(provider);
-            Assert.Equal(AuthProviderType.Google, provider.Provider);
-
-            var email = await Db.UserEmails.FirstOrDefaultAsync(e => e.UserId == currentUser.Id, TestContext.Current.CancellationToken);
-            Assert.NotNull(email);
-            Assert.Equal("google@example.com", email.Email);
+            Assert.Equal(current.Id, result.Value.Id);
+            Assert.Contains(nameof(RecordingAccountService.AddProviderAsync), _account.Calls);
+            Assert.DoesNotContain(nameof(RecordingAccountService.MergeAsync), _account.Calls);
         }
 
         [Fact]
-        public async Task ProcessOAuth_Binding_NewProvider_ExistingEmailBelongsToOtherUser_MergesUsers()
+        public async Task Binding_EmailBelongsToOtherUser_DispatchesMerge()
         {
-            var currentUser = new User { DisplayName = "Current" };
-            Db.Users.Add(currentUser);
-            Db.UserEmails.Add(new UserEmail { UserId = currentUser.Id, Email = "current@example.com", IsPrimary = true });
+            var current = new User { DisplayName = "Current" };
+            Db.Users.Add(current);
+            Db.UserEmails.Add(new UserEmail { UserId = current.Id, Email = "current@example.com", IsPrimary = true });
 
-            var otherUser = new User { DisplayName = "Other" };
-            Db.Users.Add(otherUser);
-            Db.UserEmails.Add(new UserEmail { UserId = otherUser.Id, Email = "shared@example.com", IsPrimary = true });
-            Db.AuthProviders.Add(new AuthProvider { UserId = otherUser.Id, Provider = AuthProviderType.Password, ProviderUserId = otherUser.Id.ToString() });
-
+            var other = new User { DisplayName = "Other" };
+            Db.Users.Add(other);
+            Db.UserEmails.Add(new UserEmail { UserId = other.Id, Email = "shared@example.com", IsPrimary = true });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Google, "google-456", "shared@example.com", "GoogleUser",
-                currentUserId: currentUser.Id);
+                AuthProviderType.Google, "gl-456", "shared@example.com", "GoogleUser",
+                currentUserId: current.Id);
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(currentUser.Id, result.Value.Id);
-
-            var otherUserAfter = await Db.Users.FindAsync([otherUser.Id], TestContext.Current.CancellationToken);
-            Assert.True(otherUserAfter!.IsDeleted);
-
-            var movedProviders = await Db.AuthProviders
-                .Where(p => p.UserId == currentUser.Id && p.Provider == AuthProviderType.Password)
-                .CountAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(1, movedProviders);
+            Assert.Equal(current.Id, result.Value.Id);
+            Assert.Contains(nameof(RecordingAccountService.MergeAsync), _account.Calls);
+            Assert.Equal((other.Id, current.Id), _account.LastMerge);
         }
 
         [Fact]
-        public async Task ProcessOAuth_Binding_ExistingProvider_BelongsToOtherUser_MergesUsers()
+        public async Task Binding_ExistingProvider_BelongsToOtherUser_DispatchesMerge()
         {
-            var currentUser = new User { DisplayName = "Current" };
-            Db.Users.Add(currentUser);
+            var current = new User { DisplayName = "Current" };
+            Db.Users.Add(current);
 
-            var otherUser = new User { DisplayName = "Other" };
-            Db.Users.Add(otherUser);
-            Db.AuthProviders.Add(new AuthProvider { UserId = otherUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-999" });
-
+            var other = new User { DisplayName = "Other" };
+            Db.Users.Add(other);
+            Db.AuthProviders.Add(new AuthProvider { UserId = other.Id, Provider = AuthProviderType.Github, ProviderUserId = "gh-999" });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-999", null, "GithubUser",
-                currentUserId: currentUser.Id);
+                AuthProviderType.Github, "gh-999", null, "GithubUser",
+                currentUserId: current.Id);
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(currentUser.Id, result.Value.Id);
-
-            var otherUserAfter = await Db.Users.FindAsync([otherUser.Id], TestContext.Current.CancellationToken);
-            Assert.True(otherUserAfter!.IsDeleted);
+            Assert.Equal(current.Id, result.Value.Id);
+            Assert.Equal((other.Id, current.Id), _account.LastMerge);
         }
 
         [Fact]
-        public async Task ProcessOAuth_Binding_ExistingProvider_SameUser_ReturnsSameUser()
+        public async Task Binding_ExistingProvider_SameUser_DispatchesNothing()
         {
-            var currentUser = new User { DisplayName = "Current" };
-            Db.Users.Add(currentUser);
-            Db.AuthProviders.Add(new AuthProvider { UserId = currentUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-111" });
+            var current = new User { DisplayName = "Current" };
+            Db.Users.Add(current);
+            Db.AuthProviders.Add(new AuthProvider { UserId = current.Id, Provider = AuthProviderType.Github, ProviderUserId = "gh-111" });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-111", null, "GithubUser",
-                currentUserId: currentUser.Id);
+                AuthProviderType.Github, "gh-111", null, "GithubUser",
+                currentUserId: current.Id);
 
             Assert.True(result.IsSuccess);
-            Assert.Equal(currentUser.Id, result.Value.Id);
-            Assert.False(result.Value.IsDeleted);
+            Assert.Equal(current.Id, result.Value.Id);
+            Assert.Empty(_account.Calls);
         }
 
         [Fact]
-        public async Task ProcessOAuth_Binding_InvalidCurrentUserId_ReturnsUserNotFoundForMerge()
+        public async Task Binding_InvalidCurrentUserId_ReturnsUserNotFoundForMerge()
         {
             var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-new", null, "GithubUser",
+                AuthProviderType.Github, "gh-new", null, "GithubUser",
                 currentUserId: Guid.NewGuid());
 
             Assert.False(result.IsSuccess);
             Assert.Equal(AuthError.UserNotFoundForMerge, result.Error);
-        }
-
-        // ===================== Merge Details =====================
-
-        [Fact]
-        public async Task ProcessOAuth_Merge_MovesPasswordCredential()
-        {
-            var currentUser = new User { DisplayName = "Current" };
-            Db.Users.Add(currentUser);
-
-            var sourceUser = new User { DisplayName = "Source" };
-            Db.Users.Add(sourceUser);
-            Db.PasswordCredentials.Add(new PasswordCredential { UserId = sourceUser.Id, PasswordHash = "salt.hash" });
-            Db.AuthProviders.Add(new AuthProvider { UserId = sourceUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-merge" });
-
-            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-merge", null, "GithubUser",
-                currentUserId: currentUser.Id);
-
-            var pwd = await Db.PasswordCredentials.FirstOrDefaultAsync(p => p.UserId == currentUser.Id, TestContext.Current.CancellationToken);
-            Assert.NotNull(pwd);
-            Assert.Equal("salt.hash", pwd.PasswordHash);
-        }
-
-        [Fact]
-        public async Task ProcessOAuth_Merge_RevokesSourceSessions()
-        {
-            var currentUser = new User { DisplayName = "Current" };
-            Db.Users.Add(currentUser);
-
-            var sourceUser = new User { DisplayName = "Source" };
-            Db.Users.Add(sourceUser);
-            Db.Sessions.Add(new Session { UserId = sourceUser.Id, IpAddress = "1.2.3.4", Device = "OldDevice", ExpiresAt = DateTimeOffset.UtcNow.AddDays(30) });
-            Db.AuthProviders.Add(new AuthProvider { UserId = sourceUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-session-merge" });
-
-            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-session-merge", null, "GithubUser",
-                currentUserId: currentUser.Id);
-
-            var sessions = await Db.Sessions.Where(s => s.Device == "OldDevice").ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Single(sessions);
-            Assert.True(sessions[0].Revoked);
-            Assert.Equal(currentUser.Id, sessions[0].UserId);
-        }
-
-        [Fact]
-        public async Task ProcessOAuth_Merge_HandlesEmailDeduplication()
-        {
-            var currentUser = new User { DisplayName = "Current" };
-            Db.Users.Add(currentUser);
-            Db.UserEmails.Add(new UserEmail { UserId = currentUser.Id, Email = "shared@example.com", IsPrimary = true });
-
-            var sourceUser = new User { DisplayName = "Source" };
-            Db.Users.Add(sourceUser);
-            Db.UserEmails.Add(new UserEmail { UserId = sourceUser.Id, Email = "shared@example.com", IsPrimary = true });
-            Db.UserEmails.Add(new UserEmail { UserId = sourceUser.Id, Email = "unique@example.com", IsPrimary = false });
-            Db.AuthProviders.Add(new AuthProvider { UserId = sourceUser.Id, Provider = AuthProviderType.Github, ProviderUserId = "github-email-merge" });
-
-            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-email-merge", null, "GithubUser",
-                currentUserId: currentUser.Id);
-
-            var currentEmails = await Db.UserEmails.Where(e => e.UserId == currentUser.Id).ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(2, currentEmails.Count);
-            Assert.Contains(currentEmails, e => e.Email == "shared@example.com" && e.IsPrimary);
-            Assert.Contains(currentEmails, e => e.Email == "unique@example.com" && !e.IsPrimary);
-
-            var sourceEmails = await Db.UserEmails.Where(e => e.UserId == sourceUser.Id).CountAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(0, sourceEmails);
-        }
-
-        // ===================== Email Normalization =====================
-
-        [Fact]
-        public async Task ProcessOAuth_NormalizesEmailToLowerCase()
-        {
-            await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "github-case", "USER@EXAMPLE.COM", "TestUser");
-
-            var email = await Db.UserEmails.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
-            Assert.NotNull(email);
-            Assert.Equal("user@example.com", email.Email);
         }
     }
 }

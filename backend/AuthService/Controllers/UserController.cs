@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
 using AuthService.Extensions;
@@ -13,7 +14,9 @@ namespace AuthService.Controllers
     [Produces("application/json")]
     public class UserController(
         IPasswordAuthService passwordAuthService,
-        IUserService userService) : ControllerBase
+        IAccountService accountService,
+        IUserService userService,
+        AppDbContext db) : ControllerBase
     {
         [Authorize]
         [HttpPost("add-password")]
@@ -63,10 +66,12 @@ namespace AuthService.Controllers
                 || providerType == AuthProviderType.Password)
                 return BadRequest(new { message = "Invalid provider." });
 
-            var result = await userService.UnlinkProviderAsync(userId, providerType);
-            return result.IsSuccess
-                ? Ok(new { message = $"{request.Provider} account unlinked successfully." })
-                : this.ToErrorResponse(result.Error, result.ErrorMessage);
+            var result = await accountService.UnlinkProviderAsync(userId, providerType);
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result.Error, result.ErrorMessage);
+
+            await db.SaveChangesAsync();
+            return Ok(new { message = $"{request.Provider} account unlinked successfully." });
         }
     }
 }

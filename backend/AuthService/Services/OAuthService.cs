@@ -10,198 +10,116 @@ namespace AuthService.Services
         Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null, string? providerLogin = null);
     }
 
-    public class OAuthService(AppDbContext db) : IOAuthService
+    /// <summary>
+    /// Resolves an OAuth provider callback to a user account. This is the decision
+    /// layer: it queries to determine which account the login maps to and what
+    /// action is needed (login / link / merge / create), then delegates the writes
+    /// to <see cref="IAccountService"/> and commits once.
+    /// </summary>
+    public class OAuthService(AppDbContext db, IAccountService account) : IOAuthService
     {
-        public async Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null, string? providerLogin = null)
+        public async Task<Result<User>> ProcessOAuthLoginAsync(
+            AuthProviderType provider,
+            string providerUserId,
+            string? email,
+            string displayName,
+            Guid? currentUserId = null,
+            string? providerLogin = null)
         {
-            var authProvider = await db.AuthProviders
+            var resolution = await ResolveAsync(provider, providerUserId, email, displayName, currentUserId, providerLogin);
+            if (!resolution.IsSuccess)
+                return resolution;
+
+            await db.SaveChangesAsync();
+            return resolution;
+        }
+        // APPEND_MARKER
+
+        /// <summary>
+        /// Pure decision: resolve which account this OAuth login maps to and apply
+        /// the corresponding account write (login / link / merge / create) via
+        /// IAccountService. Does not commit — the caller does.
+        /// </summary>
+        private async Task<Result<User>> ResolveAsync(
+            AuthProviderType provider,
+            string providerUserId,
+            string? email,
+            string displayName,
+            Guid? currentUserId,
+            string? providerLogin)
+        {
+            var existingLink = await db.AuthProviders
                 .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.Provider == provider && a.ProviderUserId == providerUserId);
 
-            User user;
-
-            if (authProvider is not null)
+            // Case 1: provider already linked to a user.
+            if (existingLink is not null)
             {
-                user = authProvider.User;
-                if (user.IsDeleted)
+                var linkedUser = existingLink.User;
+                if (linkedUser.IsDeleted)
                     return Result<User>.Fail(AuthError.UserDeleted);
 
-                if (currentUserId.HasValue && user.Id != currentUserId.Value)
+                // Binding flow: the provider belongs to a different user than the one
+                // currently logged in — merge the linked user into the current user.
+                if (currentUserId.HasValue && linkedUser.Id != currentUserId.Value)
                 {
                     var currentUser = await db.Users.FindAsync(currentUserId.Value);
-                    if (currentUser == null)
+                    if (currentUser is null)
                         return Result<User>.Fail(AuthError.UserNotFoundForMerge);
 
-                    await MergeUserAsync(sourceUser: user, targetUser: currentUser);
-                    user = currentUser;
+                    await account.MergeAsync(sourceUserId: linkedUser.Id, targetUserId: currentUser.Id);
+                    return Result<User>.Ok(currentUser);
                 }
+
+                return Result<User>.Ok(linkedUser);
             }
-            else
+
+            // Case 2: provider not linked, binding flow — link it to the current user.
+            if (currentUserId.HasValue)
             {
-                if (currentUserId.HasValue)
+                var linkResult = await account.AddProviderAsync(currentUserId.Value, provider, providerUserId, email);
+                if (!linkResult.IsSuccess)
+                    return linkResult;
+
+                // If the email belongs to another (live) user, merge them in.
+                if (!string.IsNullOrEmpty(email))
                 {
-                    user = await db.Users.FindAsync(currentUserId.Value) ?? null!;
-                    if (user == null)
-                        return Result<User>.Fail(AuthError.UserNotFoundForMerge);
+                    var normalized = email.ToLowerInvariant();
+                    var emailOwner = await db.UserEmails
+                        .Include(e => e.User)
+                        .FirstOrDefaultAsync(e => e.Email == normalized);
 
-                    db.AuthProviders.Add(new AuthProvider
+                    if (emailOwner is not null
+                        && emailOwner.UserId != currentUserId.Value
+                        && !emailOwner.User.IsDeleted)
                     {
-                        UserId = user.Id,
-                        Provider = provider,
-                        ProviderUserId = providerUserId
-                    });
-
-                    if (!string.IsNullOrEmpty(email))
-                    {
-                        var existingEmail = await db.UserEmails.FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
-                        if (existingEmail == null)
-                        {
-                            db.UserEmails.Add(new UserEmail
-                            {
-                                UserId = user.Id,
-                                Email = email.ToLowerInvariant(),
-                                IsPrimary = !await db.UserEmails.AnyAsync(e => e.UserId == user.Id && e.IsPrimary),
-                                VerifiedAt = DateTimeOffset.UtcNow
-                            });
-                        }
-                        else if (existingEmail.UserId == user.Id)
-                        {
-                            // Email already belongs to this user — mark as verified via OAuth
-                            if (existingEmail.VerifiedAt is null)
-                                existingEmail.VerifiedAt = DateTimeOffset.UtcNow;
-                        }
-                        else
-                        {
-                            var otherUser = await db.Users.FindAsync(existingEmail.UserId);
-                            if (otherUser != null && !otherUser.IsDeleted)
-                                await MergeUserAsync(sourceUser: otherUser, targetUser: user);
-                        }
+                        await account.MergeAsync(sourceUserId: emailOwner.UserId, targetUserId: currentUserId.Value);
                     }
                 }
-                else
-                {
-                    UserEmail? userEmail = null;
-                    if (!string.IsNullOrEmpty(email))
-                    {
-                        userEmail = await db.UserEmails
-                            .Include(e => e.User)
-                            .FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
-                    }
 
-                    if (userEmail is not null)
-                    {
-                        user = userEmail.User;
-                        if (user.IsDeleted)
-                            return Result<User>.Fail(AuthError.UserDeleted);
-
-                        db.AuthProviders.Add(new AuthProvider
-                        {
-                            UserId = user.Id,
-                            Provider = provider,
-                            ProviderUserId = providerUserId
-                        });
-                    }
-                    else
-                    {
-                        var username = await UsernameGenerator.GenerateUniqueAsync(
-                            providerLogin,
-                            email,
-                            u => db.Users.AnyAsync(x => x.Username == u));
-
-                        user = new User
-                        {
-                            Username = username,
-                            DisplayName = displayName,
-                        };
-                        db.Users.Add(user);
-
-                        if (!string.IsNullOrEmpty(email))
-                        {
-                            db.UserEmails.Add(new UserEmail
-                            {
-                                UserId = user.Id,
-                                Email = email.ToLowerInvariant(),
-                                IsPrimary = true,
-                                VerifiedAt = DateTimeOffset.UtcNow
-                            });
-                        }
-
-                        db.AuthProviders.Add(new AuthProvider
-                        {
-                            UserId = user.Id,
-                            Provider = provider,
-                            ProviderUserId = providerUserId
-                        });
-                    }
-                }
+                return linkResult;
             }
 
-            await db.SaveChangesAsync();
-            return Result<User>.Ok(user);
-        }
-
-        /// <summary>
-        /// Merge all data from sourceUser into targetUser, then soft-delete sourceUser.
-        /// </summary>
-        private async Task MergeUserAsync(User sourceUser, User targetUser)
-        {
-            // Revoke all sessions of source user (invalidates their refresh tokens)
-            var sourceSessions = await db.Sessions
-                .Where(s => s.UserId == sourceUser.Id && !s.Revoked)
-                .ToListAsync();
-            foreach (var s in sourceSessions)
-                s.Revoked = true;
-
-            // Move AuthProviders
-            var providers = await db.AuthProviders.Where(p => p.UserId == sourceUser.Id).ToListAsync();
-            foreach (var p in providers)
-                p.UserId = targetUser.Id;
-
-            // Move Emails (skip duplicates)
-            var targetEmails = await db.UserEmails.Where(e => e.UserId == targetUser.Id).Select(e => e.Email).ToListAsync();
-            var sourceEmails = await db.UserEmails.Where(e => e.UserId == sourceUser.Id).ToListAsync();
-            foreach (var e in sourceEmails)
+            // Case 3: not binding — does the email match an existing user? Link to them.
+            if (!string.IsNullOrEmpty(email))
             {
-                if (targetEmails.Contains(e.Email))
-                    db.UserEmails.Remove(e);
-                else
+                var emailOwner = await db.UserEmails
+                    .Include(e => e.User)
+                    .FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
+
+                if (emailOwner is not null)
                 {
-                    e.UserId = targetUser.Id;
-                    e.IsPrimary = false; // target keeps its own primary
+                    if (emailOwner.User.IsDeleted)
+                        return Result<User>.Fail(AuthError.UserDeleted);
+
+                    // Email already belongs to this user — link the provider only.
+                    return await account.AddProviderAsync(emailOwner.UserId, provider, providerUserId, email: null);
                 }
             }
 
-            // Move Sessions
-            var sessions = await db.Sessions.Where(s => s.UserId == sourceUser.Id).ToListAsync();
-            foreach (var s in sessions)
-                s.UserId = targetUser.Id;
-
-            // Move PasswordCredential (only if target doesn't have one)
-            // UserId is the PK of PasswordCredential (1:1), so we can't just update it.
-            // We must delete the source and create a new one for the target.
-            var sourcePassword = await db.PasswordCredentials.FindAsync(sourceUser.Id);
-            if (sourcePassword != null)
-            {
-                var targetHasPassword = await db.PasswordCredentials.AnyAsync(p => p.UserId == targetUser.Id);
-                if (!targetHasPassword)
-                {
-                    var newCredential = new PasswordCredential
-                    {
-                        UserId = targetUser.Id,
-                        PasswordHash = sourcePassword.PasswordHash
-                    };
-                    db.PasswordCredentials.Remove(sourcePassword);
-                    db.PasswordCredentials.Add(newCredential);
-                }
-                else
-                {
-                    db.PasswordCredentials.Remove(sourcePassword);
-                }
-            }
-
-            // Soft-delete source user
-            sourceUser.IsDeleted = true;
-            sourceUser.UpdatedAt = DateTimeOffset.UtcNow;
+            // Case 4: brand new user.
+            var created = await account.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin);
+            return Result<User>.Ok(created);
         }
     }
 }

@@ -68,6 +68,7 @@ builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSectio
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
 // Auth services
+builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();

@@ -16,6 +16,7 @@ namespace AuthService.Services
 
     public class PasswordAuthService(
         AppDbContext db,
+        IAccountService account,
         ISessionService sessionService,
         IPasswordHasher<User> passwordHasher) : IPasswordAuthService
     {
@@ -35,30 +36,8 @@ namespace AuthService.Services
             if (usernameExists)
                 return Result<AuthResponse>.Fail(AuthError.UsernameAlreadyExists);
 
-            var user = new User
-            {
-                Username = username,
-                DisplayName = request.DisplayName,
-            };
-
-            db.Users.Add(user);
-            db.UserEmails.Add(new UserEmail
-            {
-                Email = request.Email.ToLowerInvariant(),
-                IsPrimary = true,
-                UserId = user.Id,
-            });
-            db.PasswordCredentials.Add(new PasswordCredential
-            {
-                UserId = user.Id,
-                PasswordHash = passwordHasher.HashPassword(user, request.Password),
-            });
-            db.AuthProviders.Add(new AuthProvider
-            {
-                Provider = AuthProviderType.Password,
-                ProviderUserId = user.Id.ToString(),
-                UserId = user.Id,
-            });
+            var passwordHash = passwordHasher.HashPassword(null!, request.Password);
+            var user = await account.CreateFromPasswordAsync(username, request.Email, request.DisplayName, passwordHash);
 
             await db.SaveChangesAsync();
 
@@ -104,27 +83,10 @@ namespace AuthService.Services
 
         public async Task<Result> AddPasswordAsync(Guid userId, string password)
         {
-            var user = await db.Users
-                .Include(u => u.PasswordCredential)
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
-            if (user is null)
-                return Result.Fail(AuthError.UserNotFound);
-
-            if (user.PasswordCredential is not null)
-                return Result.Fail(AuthError.PasswordAlreadySet);
-
-            db.PasswordCredentials.Add(new PasswordCredential
-            {
-                UserId = userId,
-                PasswordHash = passwordHasher.HashPassword(user, password)
-            });
-            db.AuthProviders.Add(new AuthProvider
-            {
-                Provider = AuthProviderType.Password,
-                ProviderUserId = userId.ToString(),
-                UserId = userId
-            });
+            var passwordHash = passwordHasher.HashPassword(null!, password);
+            var result = await account.AddPasswordAsync(userId, passwordHash);
+            if (!result.IsSuccess)
+                return result;
 
             await db.SaveChangesAsync();
             return Result.Ok();
