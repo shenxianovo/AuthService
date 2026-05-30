@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using AuthService.DTOs.ApiKeys;
 using AuthService.Extensions;
 using AuthService.Services;
@@ -22,7 +21,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Create([FromBody] CreateApiKeyRequest request)
         {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = this.GetUserId();
             var response = await apiKeyService.CreateAsync(userId, request.Name);
             return CreatedAtAction(nameof(List), null, response);
         }
@@ -37,7 +36,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> List()
         {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = this.GetUserId();
             var list = await apiKeyService.ListAsync(userId);
             return Ok(list);
         }
@@ -52,7 +51,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Revoke(Guid id)
         {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var userId = this.GetUserId();
             var result = await apiKeyService.RevokeAsync(userId, id);
             return result.IsSuccess ? NoContent() : this.ToErrorResponse(result.Error);
         }

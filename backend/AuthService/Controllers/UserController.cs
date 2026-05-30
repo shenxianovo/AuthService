@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using AuthService.Data;
 using AuthService.DTOs.Auth;
 using AuthService.Entities;
@@ -25,8 +24,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> AddPassword([FromBody] AddPasswordRequest request)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
+            if (!this.TryGetUserId(out var userId))
                 return Unauthorized();
 
             var result = await passwordAuthService.AddPasswordAsync(userId, request.Password);
@@ -40,8 +38,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetMe()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
+            if (!this.TryGetUserId(out var userId))
                 return Unauthorized();
 
             var userInfo = await userService.GetUserInfoAsync(userId);
@@ -58,8 +55,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> UnlinkProvider([FromBody] UnlinkProviderRequest request)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!Guid.TryParse(userIdClaim, out var userId))
+            if (!this.TryGetUserId(out var userId))
                 return Unauthorized();
 
             if (!Enum.TryParse<AuthProviderType>(request.Provider, ignoreCase: true, out var providerType)

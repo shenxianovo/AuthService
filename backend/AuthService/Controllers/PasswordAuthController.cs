@@ -4,7 +4,6 @@ using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 
 namespace AuthService.Controllers
 {
@@ -21,8 +20,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var device = Request.Headers.UserAgent.ToString();
+            var (ipAddress, device) = this.GetClientContext();
             var result = await passwordAuthService.RegisterAsync(request, ipAddress, device);
             return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
         }
@@ -32,8 +30,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var device = Request.Headers.UserAgent.ToString();
+            var (ipAddress, device) = this.GetClientContext();
             var result = await passwordAuthService.LoginAsync(request, ipAddress, device);
             return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
         }
@@ -49,7 +46,7 @@ namespace AuthService.Controllers
             if (email is not null && !IsValidEmail(email))
                 return BadRequest(new { message = "Invalid email format." });
 
-            var userId = GetCurrentUserId();
+            var userId = this.GetUserId();
             var result = await emailVerificationService.SendVerificationCodeAsync(userId, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
             return result.IsSuccess ? Ok(new { message = "Verification code sent." }) : this.ToErrorResponse(result.Error);
         }
@@ -64,7 +61,7 @@ namespace AuthService.Controllers
             if (email is not null && !IsValidEmail(email))
                 return BadRequest(new { message = "Invalid email format." });
 
-            var userId = GetCurrentUserId();
+            var userId = this.GetUserId();
             var result = await emailVerificationService.VerifyCodeAsync(userId, request.Code, email != null ? EmailTarget.ByAddress(email) : EmailTarget.Primary);
             return result.IsSuccess ? Ok(new { message = "Email verified." }) : this.ToErrorResponse(result.Error);
         }
@@ -76,7 +73,7 @@ namespace AuthService.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> AddEmail([FromBody] AddEmailRequest request)
         {
-            var userId = GetCurrentUserId();
+            var userId = this.GetUserId();
             var result = await emailManagementService.AddEmailAsync(userId, request.Email);
             return result.IsSuccess ? Ok(new { message = "Email added. Verification code sent." }) : this.ToErrorResponse(result.Error);
         }
@@ -90,7 +87,7 @@ namespace AuthService.Controllers
             if (!IsValidEmail(email))
                 return BadRequest(new { message = "Invalid email format." });
 
-            var userId = GetCurrentUserId();
+            var userId = this.GetUserId();
             var result = await emailManagementService.RemoveEmailAsync(userId, email);
             return result.IsSuccess ? Ok(new { message = "Email removed." }) : this.ToErrorResponse(result.Error);
         }
@@ -104,17 +101,9 @@ namespace AuthService.Controllers
             if (!IsValidEmail(email))
                 return BadRequest(new { message = "Invalid email format." });
 
-            var userId = GetCurrentUserId();
+            var userId = this.GetUserId();
             var result = await emailManagementService.SetPrimaryEmailAsync(userId, email);
             return result.IsSuccess ? Ok(new { message = "Primary email updated." }) : this.ToErrorResponse(result.Error);
-        }
-
-        private Guid GetCurrentUserId()
-        {
-            var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? User.FindFirstValue("sub")
-                ?? throw new InvalidOperationException("Missing user ID claim in authenticated request.");
-            return Guid.Parse(sub);
         }
 
         private static bool IsValidEmail(string email)

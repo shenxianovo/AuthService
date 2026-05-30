@@ -16,6 +16,7 @@ namespace AuthService.Controllers
         IGithubAuthService githubAuthService,
         IGoogleAuthService googleAuthService,
         IOAuthSecurityService oauthSecurity,
+        IJwtService jwtService,
         IOptions<GithubOAuthOptions> githubOptions,
         IOptions<GoogleOAuthOptions> googleOptions) : ControllerBase
     {
@@ -26,31 +27,12 @@ namespace AuthService.Controllers
 
         [HttpGet("github/login")]
         public IActionResult GithubLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
-        {
-            // Validate redirect URL against whitelist
-            var redirectValidation = oauthSecurity.ValidateRedirectUrl(redirectUrl);
-            if (!redirectValidation.IsSuccess)
-                return this.ToErrorResponse(redirectValidation.Error, redirectValidation.ErrorMessage);
-
-            // Parse binding userId from JWT query param (if provided)
-            Guid? userId = null;
-            if (!string.IsNullOrEmpty(token))
-            {
-                var jwtSvc = HttpContext.RequestServices.GetRequiredService<IJwtService>();
-                userId = jwtSvc.ValidateTokenAndGetUserId(token);
-            }
-
-            // Generate signed state (tamper-proof, with CSRF nonce and expiry)
-            var state = oauthSecurity.GenerateState(redirectUrl, userId);
-
-            var url = "https://github.com/login/oauth/authorize" +
+            => StartOAuthLogin(redirectUrl, token, state =>
+                "https://github.com/login/oauth/authorize" +
                 $"?client_id={_githubOptions.ClientId}" +
                 $"&redirect_uri={Uri.EscapeDataString(_githubOptions.CallbackUrl)}" +
                 "&scope=user:email" +
-                $"&state={Uri.EscapeDataString(state)}";
-
-            return Redirect(url);
-        }
+                $"&state={Uri.EscapeDataString(state)}");
 
         [HttpGet("github/callback")]
         public async Task<IActionResult> GithubCallback([FromQuery] string code, [FromQuery] string? state)
@@ -64,29 +46,13 @@ namespace AuthService.Controllers
 
         [HttpGet("google/login")]
         public IActionResult GoogleLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
-        {
-            var redirectValidation = oauthSecurity.ValidateRedirectUrl(redirectUrl);
-            if (!redirectValidation.IsSuccess)
-                return this.ToErrorResponse(redirectValidation.Error, redirectValidation.ErrorMessage);
-
-            Guid? userId = null;
-            if (!string.IsNullOrEmpty(token))
-            {
-                var jwtSvc = HttpContext.RequestServices.GetRequiredService<IJwtService>();
-                userId = jwtSvc.ValidateTokenAndGetUserId(token);
-            }
-
-            var state = oauthSecurity.GenerateState(redirectUrl, userId);
-
-            var url = "https://accounts.google.com/o/oauth2/v2/auth" +
+            => StartOAuthLogin(redirectUrl, token, state =>
+                "https://accounts.google.com/o/oauth2/v2/auth" +
                 $"?client_id={_googleOptions.ClientId}" +
                 $"&redirect_uri={Uri.EscapeDataString(_googleOptions.CallbackUrl)}" +
                 "&response_type=code" +
                 "&scope=openid%20email%20profile" +
-                $"&state={Uri.EscapeDataString(state)}";
-
-            return Redirect(url);
-        }
+                $"&state={Uri.EscapeDataString(state)}");
 
         [HttpGet("google/callback")]
         public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string? state)
@@ -97,6 +63,25 @@ namespace AuthService.Controllers
         }
 
         // ===================== Helpers =====================
+
+        /// <summary>
+        /// Shared login entry: validate the redirect URL, resolve an optional binding
+        /// userId from the JWT query param, mint signed state, and redirect to the
+        /// provider's authorize URL (built by <paramref name="buildAuthorizeUrl"/>).
+        /// </summary>
+        private IActionResult StartOAuthLogin(string? redirectUrl, string? token, Func<string, string> buildAuthorizeUrl)
+        {
+            var redirectValidation = oauthSecurity.ValidateRedirectUrl(redirectUrl);
+            if (!redirectValidation.IsSuccess)
+                return this.ToErrorResponse(redirectValidation.Error, redirectValidation.ErrorMessage);
+
+            Guid? userId = null;
+            if (!string.IsNullOrEmpty(token))
+                userId = jwtService.ValidateTokenAndGetUserId(token);
+
+            var state = oauthSecurity.GenerateState(redirectUrl, userId);
+            return Redirect(buildAuthorizeUrl(state));
+        }
 
         /// <summary>
         /// Unified OAuth callback handler. Validates signed state, performs login,
@@ -118,8 +103,7 @@ namespace AuthService.Controllers
             string? redirectUrl = statePayload?.RedirectUrl;
             Guid? currentUserId = statePayload?.UserId;
 
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            var device = Request.Headers.UserAgent.ToString();
+            var (ipAddress, device) = this.GetClientContext();
 
             var result = await loginAction(ipAddress, device, currentUserId);
 
