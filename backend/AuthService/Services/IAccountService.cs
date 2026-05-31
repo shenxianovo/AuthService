@@ -15,14 +15,16 @@ namespace AuthService.Services
     {
         /// <summary>
         /// Create a new user from an OAuth login. Adds the provider, email (if present),
-        /// and generates a username.
+        /// and generates a username. The email is marked verified only when the provider
+        /// asserts it (<paramref name="emailVerified"/>).
         /// </summary>
         Task<User> CreateFromOAuthAsync(
             AuthProviderType provider,
             string providerUserId,
             string? email,
             string displayName,
-            string? providerLogin);
+            string? providerLogin,
+            bool emailVerified = false);
 
         /// <summary>
         /// Create a new user from password registration. Adds the email, password,
@@ -35,15 +37,17 @@ namespace AuthService.Services
             string passwordHash);
 
         /// <summary>
-        /// Link an OAuth provider to an existing user. Optionally adds/verifies the email.
-        /// If the email belongs to a different user, returns Fail(UserNotFoundForMerge)
-        /// signaling the caller should merge instead.
+        /// Link an OAuth provider to an existing user. Optionally adds the email; if the
+        /// email already exists on this user and the provider asserts it verified
+        /// (<paramref name="emailVerified"/>), upgrades the existing row's VerifiedAt.
+        /// If the email belongs to a different user, the caller decides to merge.
         /// </summary>
         Task<Result<User>> AddProviderAsync(
             Guid userId,
             AuthProviderType provider,
             string providerUserId,
-            string? email);
+            string? email,
+            bool emailVerified = false);
 
         /// <summary>
         /// Add a password to an existing user (OAuth-only user setting a password).
@@ -52,7 +56,8 @@ namespace AuthService.Services
 
         /// <summary>
         /// Merge all data from sourceUserId into targetUserId, then soft-delete the source.
-        /// Migrates: AuthProviders, UserEmails (deduplicates), Sessions, ApiKeys, PasswordCredential.
+        /// Migrates: AuthProviders, UserEmails (reassigned; global email uniqueness means
+        /// no overlap is possible), Sessions, ApiKeys, PasswordCredential.
         /// Revokes source's active sessions.
         /// </summary>
         Task MergeAsync(Guid sourceUserId, Guid targetUserId);

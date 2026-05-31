@@ -13,6 +13,9 @@ namespace AuthService.DTOs.Auth.Google
         [JsonPropertyName("email")]
         public string? Email { get; set; }
 
+        [JsonPropertyName("email_verified")]
+        public bool EmailVerified { get; set; }
+
         [JsonPropertyName("picture")]
         public string? Picture { get; set; }
     }

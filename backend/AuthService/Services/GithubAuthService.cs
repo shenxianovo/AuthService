@@ -57,11 +57,18 @@ namespace AuthService.Services
 
             var user = await Http.GetFromJsonAsync<GithubUser>("https://api.github.com/user");
 
+            // GET /user only carries the public profile email with no verification
+            // status (and it may be null if hidden). The primary, verified address
+            // lives in /user/emails, which is the authoritative source for both.
+            var emails = await Http.GetFromJsonAsync<List<GithubEmail>>("https://api.github.com/user/emails");
+            var primary = emails?.FirstOrDefault(e => e.Primary);
+
             return new OAuthUserInfo(
                 ProviderUserId: user!.Id.ToString(),
-                Email: user.Email,
+                Email: primary?.Email ?? user.Email,
                 DisplayName: user.Login,
-                ProviderLogin: user.Login
+                ProviderLogin: user.Login,
+                EmailVerified: primary?.Verified ?? false
             );
         }
     }

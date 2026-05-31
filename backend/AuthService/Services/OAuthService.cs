@@ -7,7 +7,7 @@ namespace AuthService.Services
 {
     public interface IOAuthService
     {
-        Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null, string? providerLogin = null);
+        Task<Result<User>> ProcessOAuthLoginAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, Guid? currentUserId = null, string? providerLogin = null, bool emailVerified = false);
     }
 
     /// <summary>
@@ -24,9 +24,10 @@ namespace AuthService.Services
             string? email,
             string displayName,
             Guid? currentUserId = null,
-            string? providerLogin = null)
+            string? providerLogin = null,
+            bool emailVerified = false)
         {
-            var resolution = await ResolveAsync(provider, providerUserId, email, displayName, currentUserId, providerLogin);
+            var resolution = await ResolveAsync(provider, providerUserId, email, displayName, currentUserId, providerLogin, emailVerified);
             if (!resolution.IsSuccess)
                 return resolution;
 
@@ -46,7 +47,8 @@ namespace AuthService.Services
             string? email,
             string displayName,
             Guid? currentUserId,
-            string? providerLogin)
+            string? providerLogin,
+            bool emailVerified)
         {
             var existingLink = await db.AuthProviders
                 .Include(a => a.User)
@@ -77,7 +79,7 @@ namespace AuthService.Services
             // Case 2: provider not linked, binding flow — link it to the current user.
             if (currentUserId.HasValue)
             {
-                var linkResult = await account.AddProviderAsync(currentUserId.Value, provider, providerUserId, email);
+                var linkResult = await account.AddProviderAsync(currentUserId.Value, provider, providerUserId, email, emailVerified);
                 if (!linkResult.IsSuccess)
                     return linkResult;
 
@@ -112,13 +114,15 @@ namespace AuthService.Services
                     if (emailOwner.User.IsDeleted)
                         return Result<User>.Fail(AuthError.UserDeleted);
 
-                    // Email already belongs to this user — link the provider only.
-                    return await account.AddProviderAsync(emailOwner.UserId, provider, providerUserId, email: null);
+                    // Email already belongs to this user — link the provider and, if the
+                    // provider asserts the email is verified, let AddProviderAsync upgrade
+                    // the existing row's VerifiedAt (it won't insert a duplicate).
+                    return await account.AddProviderAsync(emailOwner.UserId, provider, providerUserId, email, emailVerified);
                 }
             }
 
             // Case 4: brand new user.
-            var created = await account.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin);
+            var created = await account.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin, emailVerified);
             return Result<User>.Ok(created);
         }
     }

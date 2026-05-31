@@ -22,7 +22,7 @@ Ignoring case 3 leads to orphaned accounts and confusion.
 Implement **user merge** when binding triggers a conflict:
 
 - All `AuthProviders`, `UserEmails`, `PasswordCredentials`, `Sessions` are moved from the source user to the target user
-- Duplicate emails are deduplicated (keep target's, delete source's)
+- Duplicate emails are deduplicated (keep target's, delete source's) — _superseded by [ADR-011](adr-011-global-email-uniqueness.md): global email uniqueness makes a source/target overlap impossible, so this dedup was removed as dead code_
 - Source user is soft-deleted (`IsDeleted = true`)
 - Source's active sessions are revoked
 

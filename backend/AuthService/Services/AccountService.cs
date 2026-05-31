@@ -12,7 +12,8 @@ namespace AuthService.Services
             string providerUserId,
             string? email,
             string displayName,
-            string? providerLogin)
+            string? providerLogin,
+            bool emailVerified = false)
         {
             var username = await UsernameGenerator.GenerateUniqueAsync(
                 providerLogin,
@@ -33,7 +34,7 @@ namespace AuthService.Services
                     UserId = user.Id,
                     Email = email.ToLowerInvariant(),
                     IsPrimary = true,
-                    VerifiedAt = DateTimeOffset.UtcNow
+                    VerifiedAt = emailVerified ? DateTimeOffset.UtcNow : null
                 });
             }
 
@@ -85,7 +86,8 @@ namespace AuthService.Services
             Guid userId,
             AuthProviderType provider,
             string providerUserId,
-            string? email)
+            string? email,
+            bool emailVerified = false)
         {
             var user = await db.Users.FindAsync(userId);
             if (user is null)
@@ -109,10 +111,10 @@ namespace AuthService.Services
                         UserId = user.Id,
                         Email = normalized,
                         IsPrimary = !await db.UserEmails.AnyAsync(e => e.UserId == user.Id && e.IsPrimary),
-                        VerifiedAt = DateTimeOffset.UtcNow
+                        VerifiedAt = emailVerified ? DateTimeOffset.UtcNow : null
                     });
                 }
-                else if (existingEmail.UserId == user.Id)
+                else if (existingEmail.UserId == user.Id && emailVerified)
                 {
                     existingEmail.VerifiedAt ??= DateTimeOffset.UtcNow;
                 }
@@ -168,21 +170,14 @@ namespace AuthService.Services
             foreach (var p in providers)
                 p.UserId = targetUserId;
 
-            // Move Emails (deduplicate against target's existing emails)
-            var targetEmails = await db.UserEmails
-                .Where(e => e.UserId == targetUserId)
-                .Select(e => e.Email)
-                .ToListAsync();
+            // Move Emails. UserEmail.Email is globally unique (see ADR-011), so the
+            // source and target can never hold the same address — no dedup is possible
+            // here. Each email simply reassigns to the target, losing primary status.
             var sourceEmails = await db.UserEmails.Where(e => e.UserId == sourceUserId).ToListAsync();
             foreach (var e in sourceEmails)
             {
-                if (targetEmails.Contains(e.Email))
-                    db.UserEmails.Remove(e);
-                else
-                {
-                    e.UserId = targetUserId;
-                    e.IsPrimary = false; // target keeps its own primary
-                }
+                e.UserId = targetUserId;
+                e.IsPrimary = false; // target keeps its own primary
             }
 
             // Move Sessions (now belong to target so refresh tokens keep working)

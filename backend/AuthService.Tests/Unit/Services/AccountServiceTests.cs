@@ -22,10 +22,10 @@ namespace AuthService.Tests.Unit.Services
         // ==================== CreateFromOAuth ====================
 
         [Fact]
-        public async Task CreateFromOAuth_WithEmail_CreatesUserProviderAndVerifiedEmail()
+        public async Task CreateFromOAuth_VerifiedEmail_MarksEmailVerified()
         {
             var user = await _sut.CreateFromOAuthAsync(
-                AuthProviderType.Github, "gh-1", "user@example.com", "Test", "octocat");
+                AuthProviderType.Github, "gh-1", "user@example.com", "Test", "octocat", emailVerified: true);
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var email = await Db.UserEmails.SingleAsync(TestContext.Current.CancellationToken);
@@ -36,6 +36,18 @@ namespace AuthService.Tests.Unit.Services
 
             var provider = await Db.AuthProviders.SingleAsync(TestContext.Current.CancellationToken);
             Assert.Equal(AuthProviderType.Github, provider.Provider);
+        }
+
+        [Fact]
+        public async Task CreateFromOAuth_UnverifiedEmail_LeavesEmailUnverified()
+        {
+            // The provider did not assert the email is verified, so we must not trust it.
+            await _sut.CreateFromOAuthAsync(
+                AuthProviderType.Github, "gh-1", "user@example.com", "Test", "octocat", emailVerified: false);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var email = await Db.UserEmails.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.Null(email.VerifiedAt);
         }
 
         [Fact]
@@ -131,25 +143,31 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task Merge_DeduplicatesSharedEmails()
+        public async Task Merge_ReassignsSourceEmailsToTarget_LosingPrimary()
         {
+            // Email is globally unique (ADR-011), so source and target can never share an
+            // address. Merge therefore reassigns every source email to the target; the
+            // target keeps its own primary and the moved ones become non-primary.
+            // (The production-impossible "both users hold the same email" case is covered
+            // structurally by the global unique index, validated in MergeConstraintTests.)
             var target = new User { DisplayName = "Target" };
             Db.Users.Add(target);
-            Db.UserEmails.Add(new UserEmail { UserId = target.Id, Email = "shared@example.com", IsPrimary = true });
+            Db.UserEmails.Add(new UserEmail { UserId = target.Id, Email = "target@example.com", IsPrimary = true });
 
             var source = new User { DisplayName = "Source" };
             Db.Users.Add(source);
-            Db.UserEmails.Add(new UserEmail { UserId = source.Id, Email = "shared@example.com", IsPrimary = true });
-            Db.UserEmails.Add(new UserEmail { UserId = source.Id, Email = "unique@example.com", IsPrimary = false });
+            Db.UserEmails.Add(new UserEmail { UserId = source.Id, Email = "source-a@example.com", IsPrimary = true });
+            Db.UserEmails.Add(new UserEmail { UserId = source.Id, Email = "source-b@example.com", IsPrimary = false });
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await _sut.MergeAsync(source.Id, target.Id);
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var targetEmails = await Db.UserEmails.Where(e => e.UserId == target.Id).ToListAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(2, targetEmails.Count);
-            Assert.Contains(targetEmails, e => e.Email == "shared@example.com" && e.IsPrimary);
-            Assert.Contains(targetEmails, e => e.Email == "unique@example.com" && !e.IsPrimary);
+            Assert.Equal(3, targetEmails.Count);
+            Assert.Contains(targetEmails, e => e.Email == "target@example.com" && e.IsPrimary);
+            Assert.Contains(targetEmails, e => e.Email == "source-a@example.com" && !e.IsPrimary);
+            Assert.Contains(targetEmails, e => e.Email == "source-b@example.com" && !e.IsPrimary);
             Assert.Equal(0, await Db.UserEmails.CountAsync(e => e.UserId == source.Id, TestContext.Current.CancellationToken));
         }
         // APPEND_MARKER2

@@ -15,11 +15,13 @@ namespace AuthService.Tests.Fixtures
 
         public List<string> Calls { get; } = [];
         public (Guid Source, Guid Target)? LastMerge { get; private set; }
+        public bool? LastEmailVerified { get; private set; }
 
-        public Task<User> CreateFromOAuthAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, string? providerLogin)
+        public Task<User> CreateFromOAuthAsync(AuthProviderType provider, string providerUserId, string? email, string displayName, string? providerLogin, bool emailVerified = false)
         {
             Calls.Add(nameof(CreateFromOAuthAsync));
-            return _inner.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin);
+            LastEmailVerified = emailVerified;
+            return _inner.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin, emailVerified);
         }
 
         public Task<User> CreateFromPasswordAsync(string username, string email, string displayName, string passwordHash)
@@ -28,10 +30,11 @@ namespace AuthService.Tests.Fixtures
             return _inner.CreateFromPasswordAsync(username, email, displayName, passwordHash);
         }
 
-        public Task<Result<User>> AddProviderAsync(Guid userId, AuthProviderType provider, string providerUserId, string? email)
+        public Task<Result<User>> AddProviderAsync(Guid userId, AuthProviderType provider, string providerUserId, string? email, bool emailVerified = false)
         {
             Calls.Add(nameof(AddProviderAsync));
-            return _inner.AddProviderAsync(userId, provider, providerUserId, email);
+            LastEmailVerified = emailVerified;
+            return _inner.AddProviderAsync(userId, provider, providerUserId, email, emailVerified);
         }
 
         public Task<Result> AddPasswordAsync(Guid userId, string passwordHash)

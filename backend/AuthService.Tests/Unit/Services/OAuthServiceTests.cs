@@ -83,6 +83,44 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
+        public async Task PureLogin_ExistingUnverifiedEmail_ProviderVerified_UpgradesVerification()
+        {
+            // Mirrors the real scenario: a user registered with email+password (email left
+            // unverified), then logs in via OAuth returning the same, provider-verified
+            // email. The existing email row should be upgraded to verified — not left
+            // stale as it was before email_verified was threaded through.
+            var existing = new User { DisplayName = "Existing" };
+            Db.Users.Add(existing);
+            Db.UserEmails.Add(new UserEmail { UserId = existing.Id, Email = "user@example.com", IsPrimary = true, VerifiedAt = null });
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.ProcessOAuthLoginAsync(
+                AuthProviderType.Google, "gl-1", "user@example.com", "GoogleUser", emailVerified: true);
+
+            Assert.True(result.IsSuccess);
+            var email = await Db.UserEmails.SingleAsync(e => e.UserId == existing.Id, TestContext.Current.CancellationToken);
+            Assert.NotNull(email.VerifiedAt);
+        }
+
+        [Fact]
+        public async Task PureLogin_ExistingUnverifiedEmail_ProviderNotVerified_LeavesUnverified()
+        {
+            // Same path, but the provider did NOT assert verification — we must not
+            // silently trust the address. This is the security half of the fix.
+            var existing = new User { DisplayName = "Existing" };
+            Db.Users.Add(existing);
+            Db.UserEmails.Add(new UserEmail { UserId = existing.Id, Email = "user@example.com", IsPrimary = true, VerifiedAt = null });
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.ProcessOAuthLoginAsync(
+                AuthProviderType.Github, "gh-1", "user@example.com", "GithubUser", emailVerified: false);
+
+            Assert.True(result.IsSuccess);
+            var email = await Db.UserEmails.SingleAsync(e => e.UserId == existing.Id, TestContext.Current.CancellationToken);
+            Assert.Null(email.VerifiedAt);
+        }
+
+        [Fact]
         public async Task NewProvider_ExistingEmail_DeletedUser_ReturnsUserDeleted()
         {
             var deleted = new User { DisplayName = "Deleted", IsDeleted = true };

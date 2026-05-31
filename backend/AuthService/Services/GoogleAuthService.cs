@@ -60,7 +60,8 @@ namespace AuthService.Services
             return new OAuthUserInfo(
                 ProviderUserId: user!.Id,
                 Email: user.Email,
-                DisplayName: user.Name
+                DisplayName: user.Name,
+                EmailVerified: user.EmailVerified
             );
         }
     }

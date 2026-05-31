@@ -12,7 +12,8 @@ namespace AuthService.Services
         string ProviderUserId,
         string? Email,
         string DisplayName,
-        string? ProviderLogin = null
+        string? ProviderLogin = null,
+        bool EmailVerified = false
     );
 
     /// <summary>
@@ -54,7 +55,8 @@ namespace AuthService.Services
                 userInfo.Email,
                 userInfo.DisplayName,
                 currentUserId,
-                userInfo.ProviderLogin);
+                userInfo.ProviderLogin,
+                userInfo.EmailVerified);
 
             if (!userResult.IsSuccess)
                 return Result<AuthResponse>.Fail(userResult.Error, userResult.ErrorMessage);
