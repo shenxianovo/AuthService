@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 builder.Services.AddDataProtection();
+builder.Services.AddHealthChecks();
 
 // OpenAPI / NSwag
 builder.Services.AddOpenApiDocument(config =>
@@ -132,6 +133,8 @@ app.UseSwaggerUi();   // /swagger
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHealthChecks("/health");
 
 app.MapControllers();
 
