@@ -115,11 +115,14 @@ var app = builder.Build();
 // Nginx forwarded headers
 app.UseForwardedHeaders();
 
-// Auto-apply migrations on startup (safe for single-instance deployment)
+// Auto-apply migrations on startup (safe for single-instance deployment).
+// Guarded on IsRelational so integration tests using the InMemory provider —
+// which has no migrations — don't hit relational-only MigrateAsync.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    if (db.Database.IsRelational())
+        await db.Database.MigrateAsync();
 }
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
