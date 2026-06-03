@@ -1,0 +1,73 @@
+services:
+  db:
+    image: postgres:18.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: authservice
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: authservice
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authservice"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+
+  backend:
+    image: ghcr.io/shenxianovo/authservice-backend:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Connection string — Docker's DNS resolves "db" to the db container
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=authservice;Username=authservice;Password=${DB_PASSWORD}"
+      # RSA keys are mounted as docker secrets at /run/secrets/<name>
+      Jwt__PrivateKeyPath: /run/secrets/jwt_private
+      Jwt__PublicKeyPath: /run/secrets/jwt_public
+      Jwt__Issuer: ${JWT_ISSUER:-AuthService}
+      Jwt__Audience: ${JWT_AUDIENCE:-AuthService}
+      # OAuth providers
+      GithubOAuth__ClientId: ${GITHUB_OAUTH_CLIENT_ID}
+      GithubOAuth__ClientSecret: ${GITHUB_OAUTH_CLIENT_SECRET}
+      GithubOAuth__CallbackUrl: ${GITHUB_OAUTH_CALLBACK_URL}
+      GoogleOAuth__ClientId: ${GOOGLE_OAUTH_CLIENT_ID}
+      GoogleOAuth__ClientSecret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+      GoogleOAuth__CallbackUrl: ${GOOGLE_OAUTH_CALLBACK_URL}
+      # Resend email
+      Resend__ApiKey: ${RESEND_API_KEY}
+    secrets:
+      - jwt_private
+      - jwt_public
+    ports:
+      # Exposed only on loopback; host nginx fronts it
+      - "127.0.0.1:5252:8080"
+    networks:
+      - backend
+
+  frontend:
+    image: ghcr.io/shenxianovo/authservice-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - backend
+
+volumes:
+  db-data:
+
+secrets:
+  jwt_private:
+    file: ./secrets/jwt_private.pem
+  jwt_public:
+    file: ./secrets/jwt_public.pem
+
+networks:
+  backend:
+    driver: bridge
+

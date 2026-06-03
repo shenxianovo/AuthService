@@ -1,0 +1,22 @@
+# Build artifacts
+**/[Bb]in/
+**/[Oo]bj/
+**/.vs/
+
+# Keys (MUST NOT be in image)
+**/Keys/
+**/*.pem
+
+# Config secrets
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+# Test projects
+**/*.Tests/
+
+# Git / IDE
+.git/
+.vscode/
+*.user
+*.suo
