@@ -42,9 +42,6 @@ services:
     secrets:
       - jwt_private
       - jwt_public
-    ports:
-      # Exposed only on loopback; host nginx fronts it
-      - "127.0.0.1:5252:8080"
     networks:
       - backend
 
