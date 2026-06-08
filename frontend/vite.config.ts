@@ -1,20 +1,28 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
+import mockApiPlugin from './mock/plugin'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5252',
-        changeOrigin: true
+export default defineConfig(({ mode }) => {
+  const useMock = mode === 'mock'
+
+  return {
+    plugins: [
+      vue(),
+      useMock && mockApiPlugin(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
+    },
+    server: {
+      proxy: useMock ? undefined : {
+        '/api': {
+          target: 'http://localhost:5252',
+          changeOrigin: true
+        }
       }
     }
   }

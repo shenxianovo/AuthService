@@ -1,6 +1,4 @@
-import { reactive, readonly, computed, ref } from 'vue'
-
-export type AppState = 'login' | 'register' | 'email-verify' | 'profile'
+import { reactive, readonly, computed } from 'vue'
 
 export interface AuthTokens {
   accessToken: string
@@ -46,18 +44,10 @@ function _clearStorage() {
   localStorage.removeItem('user_id')
 }
 
-const appState = ref<AppState>(state.tokens !== null ? 'profile' : 'login')
-
 export const authStore = {
   state: readonly(state),
 
-  appState,
-
   isAuthenticated: computed(() => state.tokens !== null),
-
-  transition(to: AppState) {
-    appState.value = to
-  },
 
   setTokens(accessToken: string, refreshToken: string, expiresAt: Date, userId: string) {
     const tokens: AuthTokens = { accessToken, refreshToken, expiresAt, userId }
