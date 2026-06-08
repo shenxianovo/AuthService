@@ -28,8 +28,8 @@ services:
       # RSA keys are mounted as docker secrets at /run/secrets/<name>
       Jwt__PrivateKeyPath: /run/secrets/jwt_private
       Jwt__PublicKeyPath: /run/secrets/jwt_public
-      Jwt__Issuer: ${JWT_ISSUER:-AuthService}
-      Jwt__Audience: ${JWT_AUDIENCE:-AuthService}
+      Jwt__Issuer: ${JWT_ISSUER:-https://auth.shenxianovo.com}
+      Jwt__Audience: ${JWT_AUDIENCE:-https://auth.shenxianovo.com}
       # OAuth providers
       GithubOAuth__ClientId: ${GITHUB_OAUTH_CLIENT_ID}
       GithubOAuth__ClientSecret: ${GITHUB_OAUTH_CLIENT_SECRET}
