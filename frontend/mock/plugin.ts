@@ -10,7 +10,7 @@
  */
 
 import type { Plugin, Connect } from 'vite'
-import { MOCK_TOKENS, MOCK_USER_INFO, MOCK_API_KEYS, MOCK_USER_ID } from './data'
+import { MOCK_TOKENS, MOCK_USER_INFO, MOCK_API_KEYS } from './data'
 
 type Handler = (
   req: Connect.IncomingMessage & { body?: any },
