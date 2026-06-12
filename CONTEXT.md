@@ -45,6 +45,21 @@ provider to the current account rather than log in — and it may trigger an acc
 merge if the provider or email already belongs to another user.
 Avoid: "connect", "link account" as the formal term.
 
+### Password reset
+The unauthenticated forgot-password flow: proof is control of a **verified**
+email address. A single-use, 30-minute, hash-stored token is emailed; consuming
+it sets the password and revokes **all** sessions (see
+[ADR-015](docs/adr-015-password-reset-and-change.md)). For an OAuth-only user
+it sets a first password. Avoid: "password recovery", and don't conflate with
+password change.
+
+### Password change
+The authenticated flow: proof is the **current password**, not the session —
+a stolen session must not rotate the credential. Revokes every session except
+the caller's own (see [ADR-015](docs/adr-015-password-reset-and-change.md)).
+Distinct from password *set* (OAuth-only user adding a first password from the
+dashboard, session is proof enough).
+
 ### Soft delete
 Users are never hard-deleted; `IsDeleted = true` marks them gone (see
 [ADR-006](docs/adr-006-soft-delete.md)). The invariant is enforced by cascade
