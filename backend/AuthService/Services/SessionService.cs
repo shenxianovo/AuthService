@@ -77,8 +77,7 @@ namespace AuthService.Services
                 || existing.Revoked
                 || existing.ExpiresAt <= DateTimeOffset.UtcNow
                 || existing.Session.Revoked
-                || existing.Session.ExpiresAt <= DateTimeOffset.UtcNow
-                || existing.Session.User.IsDeleted)
+                || existing.Session.ExpiresAt <= DateTimeOffset.UtcNow)
             {
                 return Result<AuthResponse>.Fail(AuthError.InvalidRefreshToken);
             }

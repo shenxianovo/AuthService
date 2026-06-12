@@ -21,6 +21,9 @@ namespace AuthService.Data.Configurations
                 .WithMany(u => u.ApiKeys)
                 .HasForeignKey(k => k.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Cascade soft delete: rows owned by a merged-away user are invisible.
+            builder.HasQueryFilter(k => !k.User.IsDeleted);
         }
     }
 }

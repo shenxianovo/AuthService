@@ -25,6 +25,10 @@ namespace AuthService.Data.Configurations
                 .WithMany()
                 .HasForeignKey(e => e.UserEmailId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Cascade soft delete (two levels): verifications for a merged-away
+            // user's emails are invisible.
+            builder.HasQueryFilter(e => !e.UserEmail.User.IsDeleted);
         }
     }
 }

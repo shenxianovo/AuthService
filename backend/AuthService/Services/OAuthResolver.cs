@@ -7,12 +7,13 @@ namespace AuthService.Services
     /// The queried facts an OAuth callback resolution depends on — everything the
     /// decision needs, nothing it doesn't. Gathered up front by OAuthService so the
     /// decision itself (<see cref="OAuthResolver.Decide"/>) stays a pure function.
+    /// Soft-deleted users never appear here: the cascade query filters (ADR-014)
+    /// make them and their rows invisible to the gathering queries.
     /// </summary>
     public sealed record OAuthFacts
     {
         /// <summary>User the (provider, providerUserId) pair is already linked to, if any.</summary>
         public Guid? LinkedUserId { get; init; }
-        public bool LinkedUserDeleted { get; init; }
 
         /// <summary>Authenticated user carried in the signed OAuth state (binding flow), if any.</summary>
         public Guid? CurrentUserId { get; init; }
@@ -20,7 +21,6 @@ namespace AuthService.Services
 
         /// <summary>User who owns the provider-asserted email address, if any (globally unique, ADR-011).</summary>
         public Guid? EmailOwnerUserId { get; init; }
-        public bool EmailOwnerDeleted { get; init; }
     }
 
     /// <summary>
@@ -61,9 +61,6 @@ namespace AuthService.Services
             // Case 1: provider already linked to a user.
             if (f.LinkedUserId is Guid linked)
             {
-                if (f.LinkedUserDeleted)
-                    return new OAuthDecision.Reject(AuthError.UserDeleted);
-
                 // Binding flow with a different owner — merge the linked user in.
                 if (f.CurrentUserId is Guid current && linked != current)
                 {
@@ -81,9 +78,7 @@ namespace AuthService.Services
                 if (!f.CurrentUserExists)
                     return new OAuthDecision.Reject(AuthError.UserNotFoundForMerge);
 
-                var mergeOwner = f.EmailOwnerUserId is Guid owner
-                                 && owner != currentUser
-                                 && !f.EmailOwnerDeleted
+                var mergeOwner = f.EmailOwnerUserId is Guid owner && owner != currentUser
                     ? f.EmailOwnerUserId
                     : null;
                 return new OAuthDecision.LinkToCurrent(currentUser, mergeOwner);
@@ -91,11 +86,7 @@ namespace AuthService.Services
 
             // Case 3: pure login — email belongs to an existing user.
             if (f.EmailOwnerUserId is Guid emailOwner)
-            {
-                if (f.EmailOwnerDeleted)
-                    return new OAuthDecision.Reject(AuthError.UserDeleted);
                 return new OAuthDecision.LinkToEmailOwner(emailOwner);
-            }
 
             // Case 4: brand new user.
             return new OAuthDecision.CreateNewUser();

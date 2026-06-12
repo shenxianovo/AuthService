@@ -51,8 +51,10 @@ namespace AuthService.Services
                 .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.Provider == provider && a.ProviderUserId == providerUserId);
 
+            // Not FindAsync: a tracked (e.g. just-soft-deleted) entity would bypass
+            // the soft-delete query filter via the change tracker.
             var currentUser = currentUserId.HasValue
-                ? await db.Users.FindAsync(currentUserId.Value)
+                ? await db.Users.FirstOrDefaultAsync(u => u.Id == currentUserId.Value)
                 : null;
 
             UserEmail? emailOwner = null;
@@ -67,11 +69,9 @@ namespace AuthService.Services
             var facts = new OAuthFacts
             {
                 LinkedUserId = existingLink?.UserId,
-                LinkedUserDeleted = existingLink?.User.IsDeleted ?? false,
                 CurrentUserId = currentUserId,
                 CurrentUserExists = currentUser is not null,
                 EmailOwnerUserId = emailOwner?.UserId,
-                EmailOwnerDeleted = emailOwner?.User.IsDeleted ?? false,
             };
 
             return (facts, new LoadedUsers(existingLink?.User, currentUser, emailOwner?.User));

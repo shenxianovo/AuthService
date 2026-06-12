@@ -52,18 +52,22 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public async Task ExistingProvider_DeletedUser_ReturnsUserDeleted()
+        public async Task Binding_CurrentUserDeleted_ReturnsUserNotFoundForMerge()
         {
+            // Reachable state (ADR-001): an access token stays valid up to 15 minutes
+            // after its user was merged away — a binding callback in that window must
+            // not resolve. The cascade soft-delete filter hides the user entirely.
             var result = await _sut.ProcessOAuthLoginAsync(
                 AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
             result.Value.IsDeleted = true;
             await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var second = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "gh-123", "user@example.com", "TestUser");
+                AuthProviderType.Google, "gl-deleted", null, "TestUser",
+                currentUserId: result.Value.Id);
 
             Assert.False(second.IsSuccess);
-            Assert.Equal(AuthError.UserDeleted, second.Error);
+            Assert.Equal(AuthError.UserNotFoundForMerge, second.Error);
         }
 
         [Fact]
@@ -118,21 +122,6 @@ namespace AuthService.Tests.Unit.Services
             Assert.True(result.IsSuccess);
             var email = await Db.UserEmails.SingleAsync(e => e.UserId == existing.Id, TestContext.Current.CancellationToken);
             Assert.Null(email.VerifiedAt);
-        }
-
-        [Fact]
-        public async Task NewProvider_ExistingEmail_DeletedUser_ReturnsUserDeleted()
-        {
-            var deleted = new User { DisplayName = "Deleted", IsDeleted = true };
-            Db.Users.Add(deleted);
-            Db.UserEmails.Add(new UserEmail { UserId = deleted.Id, Email = "deleted@example.com", IsPrimary = true });
-            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            var result = await _sut.ProcessOAuthLoginAsync(
-                AuthProviderType.Github, "gh-000", "deleted@example.com", "GithubUser");
-
-            Assert.False(result.IsSuccess);
-            Assert.Equal(AuthError.UserDeleted, result.Error);
         }
 
         [Fact]

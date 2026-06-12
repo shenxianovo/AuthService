@@ -36,9 +36,12 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public async Task CreateSession_CreatesSessionAndRefreshToken()
         {
-            var userId = Guid.NewGuid();
+            var user = new User { Username = "tester", DisplayName = "Test" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var userId = user.Id;
 
-            var result = await _sut.CreateSessionAsync(new User { Id = userId, Username = "tester" }, "127.0.0.1", "TestAgent");
+            var result = await _sut.CreateSessionAsync(user, "127.0.0.1", "TestAgent");
 
             Assert.True(result.IsSuccess);
             Assert.Equal(userId, result.Value.UserId);
@@ -76,9 +79,11 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public async Task CreateSession_RefreshTokenHashDiffersFromRawToken()
         {
-            var userId = Guid.NewGuid();
+            var user = new User { Username = "tester", DisplayName = "Test" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            var result = await _sut.CreateSessionAsync(new User { Id = userId, Username = "tester" }, "127.0.0.1", "TestAgent");
+            var result = await _sut.CreateSessionAsync(user, "127.0.0.1", "TestAgent");
 
             var refreshToken = await Db.RefreshTokens.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
             Assert.NotNull(refreshToken);
@@ -103,10 +108,12 @@ namespace AuthService.Tests.Unit.Services
         [Fact]
         public async Task CreateSession_MultipleCallsCreateSeparateSessions()
         {
-            var userId = Guid.NewGuid();
+            var user = new User { Username = "tester", DisplayName = "Test" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            await _sut.CreateSessionAsync(new User { Id = userId, Username = "tester" }, "127.0.0.1", "Device1");
-            await _sut.CreateSessionAsync(new User { Id = userId, Username = "tester" }, "192.168.1.1", "Device2");
+            await _sut.CreateSessionAsync(user, "127.0.0.1", "Device1");
+            await _sut.CreateSessionAsync(user, "192.168.1.1", "Device2");
 
             var sessions = await Db.Sessions.ToListAsync(TestContext.Current.CancellationToken);
             Assert.Equal(2, sessions.Count);

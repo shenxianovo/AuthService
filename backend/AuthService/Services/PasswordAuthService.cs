@@ -32,7 +32,9 @@ namespace AuthService.Services
             if (emailExists)
                 return Result<AuthResponse>.Fail(AuthError.EmailAlreadyExists);
 
-            var usernameExists = await db.Users.AnyAsync(u => u.Username == username);
+            // Username uniqueness is global — soft-deleted users still hold their
+            // username under the unique index, so bypass the soft-delete filter.
+            var usernameExists = await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Username == username);
             if (usernameExists)
                 return Result<AuthResponse>.Fail(AuthError.UsernameAlreadyExists);
 
@@ -51,7 +53,7 @@ namespace AuthService.Services
                     .ThenInclude(u => u.PasswordCredential)
                 .FirstOrDefaultAsync(e => e.Email == request.Email.ToLowerInvariant());
 
-            if (userEmail is null || userEmail.User.IsDeleted)
+            if (userEmail is null)
                 return Result<AuthResponse>.Fail(AuthError.InvalidCredentials);
 
             var credential = userEmail.User.PasswordCredential;

@@ -20,7 +20,7 @@ namespace AuthService.Services
             var user = await db.Users
                 .Include(u => u.Emails)
                 .Include(u => u.Providers)
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+                .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user is null)
                 return null;
@@ -53,7 +53,7 @@ namespace AuthService.Services
         {
             var normalized = username.ToLowerInvariant();
             var user = await db.Users
-                .Where(u => !u.IsDeleted && u.Username == normalized)
+                .Where(u => u.Username == normalized)
                 .Select(u => new PublicUserResponse
                 {
                     Id = u.Id,

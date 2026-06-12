@@ -15,10 +15,12 @@ namespace AuthService.Services
             string? providerLogin,
             bool emailVerified = false)
         {
+            // Username uniqueness is global — soft-deleted users still hold their
+            // username under the unique index, so bypass the soft-delete filter.
             var username = await UsernameGenerator.GenerateUniqueAsync(
                 providerLogin,
                 email,
-                u => db.Users.AnyAsync(x => x.Username == u));
+                u => db.Users.IgnoreQueryFilters().AnyAsync(x => x.Username == u));
 
             var user = new User
             {

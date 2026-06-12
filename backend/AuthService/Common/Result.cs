@@ -76,7 +76,6 @@ namespace AuthService.Common
 
         InvalidCredentials,
         InvalidRefreshToken,
-        UserDeleted,
         UserNotFoundForMerge,
 
         CannotUnlinkLastLoginMethod,

@@ -26,6 +26,9 @@ namespace AuthService.Data.Configurations
 
             builder.HasIndex(e => e.Email)
                 .IsUnique();
+
+            // Cascade soft delete: rows owned by a merged-away user are invisible.
+            builder.HasQueryFilter(e => !e.User.IsDeleted);
         }
     }
 }

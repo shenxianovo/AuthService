@@ -24,18 +24,6 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public void Linked_DeletedUser_Rejects()
-        {
-            var decision = OAuthResolver.Decide(new OAuthFacts
-            {
-                LinkedUserId = LinkedId,
-                LinkedUserDeleted = true,
-            });
-
-            Assert.Equal(new OAuthDecision.Reject(AuthError.UserDeleted), decision);
-        }
-
-        [Fact]
         public void Linked_BindingToSameUser_LogsInAsLinked()
         {
             var decision = OAuthResolver.Decide(new OAuthFacts
@@ -115,20 +103,6 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public void Binding_EmailOwnedByDeletedUser_LinksWithoutMerge()
-        {
-            var decision = OAuthResolver.Decide(new OAuthFacts
-            {
-                CurrentUserId = CurrentId,
-                CurrentUserExists = true,
-                EmailOwnerUserId = OwnerId,
-                EmailOwnerDeleted = true,
-            });
-
-            Assert.Equal(new OAuthDecision.LinkToCurrent(CurrentId, null), decision);
-        }
-
-        [Fact]
         public void Binding_CurrentUserMissing_Rejects()
         {
             var decision = OAuthResolver.Decide(new OAuthFacts
@@ -148,18 +122,6 @@ namespace AuthService.Tests.Unit.Services
             var decision = OAuthResolver.Decide(new OAuthFacts { EmailOwnerUserId = OwnerId });
 
             Assert.Equal(new OAuthDecision.LinkToEmailOwner(OwnerId), decision);
-        }
-
-        [Fact]
-        public void PureLogin_EmailOwnerDeleted_Rejects()
-        {
-            var decision = OAuthResolver.Decide(new OAuthFacts
-            {
-                EmailOwnerUserId = OwnerId,
-                EmailOwnerDeleted = true,
-            });
-
-            Assert.Equal(new OAuthDecision.Reject(AuthError.UserDeleted), decision);
         }
 
         // ── Case 4: nothing matches ─────────────────────────────────────────────

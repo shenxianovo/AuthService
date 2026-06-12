@@ -104,9 +104,6 @@ namespace AuthService.Services
             if (key is null || key.SecretHash != secretHash)
                 return Result<ExchangeApiKeyResponse>.Fail(AuthError.InvalidApiKey);
 
-            if (key.User.IsDeleted)
-                return Result<ExchangeApiKeyResponse>.Fail(AuthError.UserDeleted);
-
             // Update last used
             key.LastUsedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();

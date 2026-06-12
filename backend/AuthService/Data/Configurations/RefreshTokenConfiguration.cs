@@ -25,6 +25,10 @@ namespace AuthService.Data.Configurations
                 .WithMany(s => s.RefreshTokens)
                 .HasForeignKey(r => r.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Cascade soft delete (two levels): tokens of a merged-away user's
+            // sessions are invisible.
+            builder.HasQueryFilter(r => !r.Session.User.IsDeleted);
         }
     }
 }

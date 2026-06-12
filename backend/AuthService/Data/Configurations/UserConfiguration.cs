@@ -24,6 +24,11 @@ namespace AuthService.Data.Configurations
             builder.Property(u => u.UpdatedAt);
             builder.Property(u => u.IsDeleted)
                 .HasDefaultValue(false);
+
+            // Soft delete (ADR-006): a merged-away user is invisible everywhere.
+            // Existence checks against globally-unique columns (e.g. Username) must
+            // use IgnoreQueryFilters — the unique index still sees deleted rows.
+            builder.HasQueryFilter(u => !u.IsDeleted);
         }
     }
 }
