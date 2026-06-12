@@ -1,6 +1,6 @@
 # ADR-006: Soft Delete Users Instead of Hard Delete
 
-## Status: Accepted
+## Status: Accepted (enforcement superseded by [ADR-014](adr-014-cascade-soft-delete-filters.md))
 
 ## Date: 2026-03-20
 
@@ -15,7 +15,9 @@ Account merging moves all data from a source user to a target user. The source u
 Soft delete via `User.IsDeleted` flag:
 
 - Merged source users are marked `IsDeleted = true`
-- All queries filter out deleted users (`IsDeleted` checked in services)
+- All queries filter out deleted users — _enforcement superseded by
+  [ADR-014](adr-014-cascade-soft-delete-filters.md): cascade EF global query
+  filters replaced the per-service manual checks_
 - Row remains in DB for audit trail
 
 ## Consequences
@@ -23,7 +25,8 @@ Soft delete via `User.IsDeleted` flag:
 - ✅ Audit trail preserved — can trace merge history
 - ✅ Foreign keys remain intact (no cascade delete complications)
 - ✅ Reversible in theory (clear the flag)
-- ⚠️ Must remember to filter `IsDeleted` in every user query
+- ⚠️ ~~Must remember to filter `IsDeleted` in every user query~~ — closed by
+  ADR-014's query filters
 
 ## References
 

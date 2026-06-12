@@ -47,7 +47,10 @@ Avoid: "connect", "link account" as the formal term.
 
 ### Soft delete
 Users are never hard-deleted; `IsDeleted = true` marks them gone (see
-[ADR-006](docs/adr-006-soft-delete.md)). Every user query must filter on this flag.
-A soft-deleted user is the result of an account merge, and its tokens/keys are
-treated as invalid.
+[ADR-006](docs/adr-006-soft-delete.md)). The invariant is enforced by cascade
+EF global query filters — a soft-deleted user and every row it owns are
+invisible to all queries (see [ADR-014](docs/adr-014-cascade-soft-delete-filters.md)).
+A soft-deleted user is the result of an account merge. Global-uniqueness
+checks (e.g. username) must use `IgnoreQueryFilters()`, since the unique
+indexes still see deleted rows.
 
