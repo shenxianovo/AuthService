@@ -529,6 +529,12 @@ export interface IPasswordAuthClient {
 
     login(request: LoginRequest): Promise<AuthResponse>;
 
+    forgotPassword(request: ForgotPasswordRequest): Promise<void>;
+
+    resetPassword(request: ResetPasswordRequest): Promise<void>;
+
+    changePassword(request: ChangePasswordRequest): Promise<void>;
+
     sendVerificationCode(email: string | null | undefined): Promise<void>;
 
     verifyEmail(email: string | null | undefined, request: VerifyEmailRequest): Promise<void>;
@@ -640,6 +646,129 @@ export class PasswordAuthClient implements IPasswordAuthClient {
         return Promise.resolve<AuthResponse>(null as any);
     }
 
+    forgotPassword(request: ForgotPasswordRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/forgot-password";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processForgotPassword(_response);
+        });
+    }
+
+    protected processForgotPassword(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 204) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    resetPassword(request: ResetPasswordRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/reset-password";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processResetPassword(_response);
+        });
+    }
+
+    protected processResetPassword(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 204) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    changePassword(request: ChangePasswordRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/change-password";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processChangePassword(_response);
+        });
+    }
+
+    protected processChangePassword(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 204) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ProblemDetails.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ProblemDetails.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     sendVerificationCode(email: string | null | undefined): Promise<void> {
         let url_ = this.baseUrl + "/api/v1/auth/email/send-code?";
         if (email !== undefined && email !== null)
@@ -677,6 +806,13 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
             result401 = ProblemDetails.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status === 429) {
+            return response.text().then((_responseText) => {
+            let result429: any = null;
+            let resultData429 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result429 = ProblemDetails.fromJS(resultData429);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result429);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -862,6 +998,66 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             });
         }
         return Promise.resolve<void>(null as any);
+    }
+}
+
+export interface IPublicUserClient {
+
+    getByUsername(username: string): Promise<PublicUserResponse>;
+}
+
+export class PublicUserClient implements IPublicUserClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "http://localhost:5252";
+    }
+
+    getByUsername(username: string): Promise<PublicUserResponse> {
+        let url_ = this.baseUrl + "/api/v1/users/{username}";
+        if (username === undefined || username === null)
+            throw new globalThis.Error("The parameter 'username' must be defined.");
+        url_ = url_.replace("{username}", encodeURIComponent("" + username));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetByUsername(_response);
+        });
+    }
+
+    protected processGetByUsername(response: Response): Promise<PublicUserResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = PublicUserResponse.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result404 = ProblemDetails.fromJS(resultData404);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<PublicUserResponse>(null as any);
     }
 }
 
@@ -1411,6 +1607,7 @@ export interface IExchangeApiKeyRequest {
 
 export class AuthResponse implements IAuthResponse {
     userId?: string;
+    username?: string;
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -1427,6 +1624,7 @@ export class AuthResponse implements IAuthResponse {
     init(_data?: any) {
         if (_data) {
             this.userId = _data["userId"];
+            this.username = _data["username"];
             this.accessToken = _data["accessToken"];
             this.refreshToken = _data["refreshToken"];
             this.expiresAt = _data["expiresAt"] ? new Date(_data["expiresAt"].toString()) : undefined as any;
@@ -1443,6 +1641,7 @@ export class AuthResponse implements IAuthResponse {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["userId"] = this.userId;
+        data["username"] = this.username;
         data["accessToken"] = this.accessToken;
         data["refreshToken"] = this.refreshToken;
         data["expiresAt"] = this.expiresAt ? this.expiresAt.toISOString() : undefined as any;
@@ -1452,6 +1651,7 @@ export class AuthResponse implements IAuthResponse {
 
 export interface IAuthResponse {
     userId?: string;
+    username?: string;
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -1494,6 +1694,7 @@ export interface IExchangeCodeRequest {
 }
 
 export class RegisterRequest implements IRegisterRequest {
+    username!: string;
     displayName!: string;
     email!: string;
     password!: string;
@@ -1509,6 +1710,7 @@ export class RegisterRequest implements IRegisterRequest {
 
     init(_data?: any) {
         if (_data) {
+            this.username = _data["username"];
             this.displayName = _data["displayName"];
             this.email = _data["email"];
             this.password = _data["password"];
@@ -1524,6 +1726,7 @@ export class RegisterRequest implements IRegisterRequest {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["username"] = this.username;
         data["displayName"] = this.displayName;
         data["email"] = this.email;
         data["password"] = this.password;
@@ -1532,6 +1735,7 @@ export class RegisterRequest implements IRegisterRequest {
 }
 
 export interface IRegisterRequest {
+    username: string;
     displayName: string;
     email: string;
     password: string;
@@ -1575,6 +1779,122 @@ export class LoginRequest implements ILoginRequest {
 export interface ILoginRequest {
     email: string;
     password: string;
+}
+
+export class ForgotPasswordRequest implements IForgotPasswordRequest {
+    email!: string;
+
+    constructor(data?: IForgotPasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.email = _data["email"];
+        }
+    }
+
+    static fromJS(data: any): ForgotPasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ForgotPasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["email"] = this.email;
+        return data;
+    }
+}
+
+export interface IForgotPasswordRequest {
+    email: string;
+}
+
+export class ResetPasswordRequest implements IResetPasswordRequest {
+    token!: string;
+    newPassword!: string;
+
+    constructor(data?: IResetPasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.token = _data["token"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ResetPasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ResetPasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["token"] = this.token;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IResetPasswordRequest {
+    token: string;
+    newPassword: string;
+}
+
+export class ChangePasswordRequest implements IChangePasswordRequest {
+    currentPassword!: string;
+    newPassword!: string;
+
+    constructor(data?: IChangePasswordRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.currentPassword = _data["currentPassword"];
+            this.newPassword = _data["newPassword"];
+        }
+    }
+
+    static fromJS(data: any): ChangePasswordRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangePasswordRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["currentPassword"] = this.currentPassword;
+        data["newPassword"] = this.newPassword;
+        return data;
+    }
+}
+
+export interface IChangePasswordRequest {
+    currentPassword: string;
+    newPassword: string;
 }
 
 export class VerifyEmailRequest implements IVerifyEmailRequest {
@@ -1647,6 +1967,50 @@ export class AddEmailRequest implements IAddEmailRequest {
 
 export interface IAddEmailRequest {
     email: string;
+}
+
+export class PublicUserResponse implements IPublicUserResponse {
+    id?: string;
+    username?: string;
+    displayName?: string;
+
+    constructor(data?: IPublicUserResponse) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.username = _data["username"];
+            this.displayName = _data["displayName"];
+        }
+    }
+
+    static fromJS(data: any): PublicUserResponse {
+        data = typeof data === 'object' ? data : {};
+        let result = new PublicUserResponse();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["username"] = this.username;
+        data["displayName"] = this.displayName;
+        return data;
+    }
+}
+
+export interface IPublicUserResponse {
+    id?: string;
+    username?: string;
+    displayName?: string;
 }
 
 export class RefreshRequest implements IRefreshRequest {
