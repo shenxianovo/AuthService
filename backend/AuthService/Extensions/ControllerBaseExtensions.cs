@@ -41,6 +41,8 @@ namespace AuthService.Extensions
                 [AuthError.InvalidCredentials] = (StatusCodes.Status401Unauthorized, "Invalid credentials."),
                 [AuthError.InvalidRefreshToken] = (StatusCodes.Status401Unauthorized, "Invalid or expired refresh token."),
                 [AuthError.UserNotFoundForMerge] = (StatusCodes.Status401Unauthorized, "User not found."),
+                [AuthError.InvalidResetToken] = (StatusCodes.Status400BadRequest, "Invalid or expired reset token."),
+                [AuthError.PasswordNotSet] = (StatusCodes.Status400BadRequest, "No password set on this account. Add one first."),
 
                 [AuthError.CannotUnlinkLastLoginMethod] = (StatusCodes.Status400BadRequest, "Cannot unlink the last login method."),
                 [AuthError.ProviderNotLinked] = (StatusCodes.Status400BadRequest, "Provider is not linked to this account."),

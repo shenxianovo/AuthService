@@ -12,6 +12,7 @@ namespace AuthService.Controllers
     [Produces("application/json")]
     public class PasswordAuthController(
         IPasswordAuthService passwordAuthService,
+        IPasswordResetService passwordResetService,
         IEmailVerificationService emailVerificationService,
         IEmailManagementService emailManagementService) : ControllerBase
     {
@@ -33,6 +34,51 @@ namespace AuthService.Controllers
             var (ipAddress, device) = this.GetClientContext();
             var result = await passwordAuthService.LoginAsync(request, ipAddress, device);
             return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
+        }
+
+        /// <summary>
+        /// Start the forgot-password flow. Always returns 204 — whether the email
+        /// exists, is unverified, or is rate-limited is never revealed.
+        /// </summary>
+        [HttpPost("forgot-password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            await passwordResetService.RequestResetAsync(request.Email);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Consume a reset token from the emailed link: sets the new password and
+        /// signs the user out everywhere.
+        /// </summary>
+        [HttpPost("reset-password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var result = await passwordResetService.ResetAsync(request.Token, request.NewPassword);
+            return result.IsSuccess ? NoContent() : this.ToErrorResponse(result.Error);
+        }
+
+        /// <summary>
+        /// Authenticated password change. Requires the current password (a session
+        /// alone is not enough) and signs out every other session.
+        /// </summary>
+        [Authorize]
+        [HttpPost("change-password")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            // API-key tokens carry no session and must not change credentials.
+            if (!this.TryGetSessionId(out var sessionId))
+                return Unauthorized();
+
+            var userId = this.GetUserId();
+            var result = await passwordAuthService.ChangePasswordAsync(userId, sessionId, request.CurrentPassword, request.NewPassword);
+            return result.IsSuccess ? NoContent() : this.ToErrorResponse(result.Error);
         }
 
         [Authorize]

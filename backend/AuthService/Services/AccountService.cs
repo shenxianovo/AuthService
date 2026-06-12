@@ -154,6 +154,37 @@ namespace AuthService.Services
             return Result.Ok();
         }
 
+        public async Task<Result> SetPasswordAsync(Guid userId, string passwordHash)
+        {
+            var user = await db.Users
+                .Include(u => u.PasswordCredential)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user is null)
+                return Result.Fail(AuthError.UserNotFound);
+
+            if (user.PasswordCredential is not null)
+            {
+                user.PasswordCredential.PasswordHash = passwordHash;
+                user.PasswordCredential.UpdatedAt = DateTimeOffset.UtcNow;
+                return Result.Ok();
+            }
+
+            db.PasswordCredentials.Add(new PasswordCredential
+            {
+                UserId = userId,
+                PasswordHash = passwordHash
+            });
+            db.AuthProviders.Add(new AuthProvider
+            {
+                Provider = AuthProviderType.Password,
+                ProviderUserId = userId.ToString(),
+                UserId = userId
+            });
+
+            return Result.Ok();
+        }
+
         public async Task MergeAsync(Guid sourceUserId, Guid targetUserId)
         {
             var sourceUser = await db.Users.FindAsync(sourceUserId);

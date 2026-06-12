@@ -77,6 +77,8 @@ namespace AuthService.Common
         InvalidCredentials,
         InvalidRefreshToken,
         UserNotFoundForMerge,
+        InvalidResetToken,
+        PasswordNotSet,
 
         CannotUnlinkLastLoginMethod,
         ProviderNotLinked,

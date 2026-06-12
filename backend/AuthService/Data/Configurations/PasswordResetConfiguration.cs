@@ -21,6 +21,10 @@ namespace AuthService.Data.Configurations
                 .IsRequired()
                 .HasDefaultValue(false);
 
+            // Lookup is by hash of the presented token.
+            builder.HasIndex(p => p.TokenHash)
+                .IsUnique();
+
             builder.HasOne(p => p.User)
                 .WithMany()
                 .HasForeignKey(p => p.UserId)

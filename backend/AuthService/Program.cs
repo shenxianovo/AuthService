@@ -89,6 +89,7 @@ builder.Services.Configure<ResendClientOptions>(o =>
 builder.Services.AddTransient<IResend, ResendClient>();
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IEmailManagementService, EmailManagementService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 

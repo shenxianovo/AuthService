@@ -33,6 +33,16 @@ namespace AuthService.Extensions
             return Guid.TryParse(sub, out userId);
         }
 
+        /// <summary>
+        /// Try to read the session id ("sid" claim) of the access token. Absent on
+        /// API-key tokens ("akid"), which must not drive session-bound flows.
+        /// </summary>
+        public static bool TryGetSessionId(this ControllerBase controller, out Guid sessionId)
+        {
+            var sid = controller.User.FindFirstValue("sid");
+            return Guid.TryParse(sid, out sessionId);
+        }
+
         /// <summary>Client IP and user-agent, as passed to session creation.</summary>
         public static (string IpAddress, string Device) GetClientContext(this ControllerBase controller)
         {

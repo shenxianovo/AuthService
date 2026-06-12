@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
 
 namespace AuthService.Tests.Fixtures
 {
@@ -58,12 +57,12 @@ namespace AuthService.Tests.Fixtures
                         services.AddDbContext<AppDbContext>(options =>
                             options.UseInMemoryDatabase(dbName));
 
-                        // Replace real email service with a no-op mock (tests don't send emails)
+                        // Replace real email service with a recording no-op fake
+                        // (tests don't send emails, but can read what would be sent).
                         var emailDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IEmailService));
                         if (emailDescriptor != null) services.Remove(emailDescriptor);
-                        services.AddScoped<IEmailService>(_ =>
-                            Mock.Of<IEmailService>(m =>
-                                m.SendVerificationCodeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()) == Task.CompletedTask));
+                        services.AddSingleton<RecordingEmailService>();
+                        services.AddSingleton<IEmailService>(sp => sp.GetRequiredService<RecordingEmailService>());
                     });
                 });
 

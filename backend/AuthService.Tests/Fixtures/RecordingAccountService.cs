@@ -43,6 +43,12 @@ namespace AuthService.Tests.Fixtures
             return _inner.AddPasswordAsync(userId, passwordHash);
         }
 
+        public Task<Result> SetPasswordAsync(Guid userId, string passwordHash)
+        {
+            Calls.Add(nameof(SetPasswordAsync));
+            return _inner.SetPasswordAsync(userId, passwordHash);
+        }
+
         public Task MergeAsync(Guid sourceUserId, Guid targetUserId)
         {
             Calls.Add(nameof(MergeAsync));

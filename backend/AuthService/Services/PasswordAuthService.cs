@@ -12,6 +12,14 @@ namespace AuthService.Services
         Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, string ipAddress, string device);
         Task<Result<AuthResponse>> LoginAsync(LoginRequest request, string ipAddress, string device);
         Task<Result> AddPasswordAsync(Guid userId, string password);
+
+        /// <summary>
+        /// Authenticated password change. Proof is the CURRENT password, not just the
+        /// session — a stolen session must not be enough to take over the credential.
+        /// Revokes every other session; the caller's own (<paramref name="sessionId"/>)
+        /// survives.
+        /// </summary>
+        Task<Result> ChangePasswordAsync(Guid userId, Guid sessionId, string currentPassword, string newPassword);
     }
 
     public class PasswordAuthService(
@@ -89,6 +97,43 @@ namespace AuthService.Services
             var result = await account.AddPasswordAsync(userId, passwordHash);
             if (!result.IsSuccess)
                 return result;
+
+            await db.SaveChangesAsync();
+            return Result.Ok();
+        }
+
+        public async Task<Result> ChangePasswordAsync(Guid userId, Guid sessionId, string currentPassword, string newPassword)
+        {
+            var user = await db.Users
+                .Include(u => u.PasswordCredential)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user is null)
+                return Result.Fail(AuthError.UserNotFound);
+
+            if (user.PasswordCredential is null)
+                return Result.Fail(AuthError.PasswordNotSet);
+
+            PasswordVerificationResult verifyResult;
+            try
+            {
+                verifyResult = passwordHasher.VerifyHashedPassword(user, user.PasswordCredential.PasswordHash, currentPassword);
+            }
+            catch (FormatException)
+            {
+                return Result.Fail(AuthError.InvalidCredentials);
+            }
+
+            if (verifyResult == PasswordVerificationResult.Failed)
+                return Result.Fail(AuthError.InvalidCredentials);
+
+            var newHash = passwordHasher.HashPassword(user, newPassword);
+            var setResult = await account.SetPasswordAsync(userId, newHash);
+            if (!setResult.IsSuccess)
+                return setResult;
+
+            // Google-style: the change signs out every other session, keeping this one.
+            await sessionService.RevokeAllSessionsAsync(userId, exceptSessionId: sessionId);
 
             await db.SaveChangesAsync();
             return Result.Ok();

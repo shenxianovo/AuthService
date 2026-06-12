@@ -16,6 +16,13 @@ namespace AuthService.Services
         Task<Result<AuthResponse>> CreateSessionAsync(User user, string ipAddress, string device);
         Task<Result<AuthResponse>> RefreshSessionAsync(string refreshToken);
         Task RevokeSessionAsync(Guid sessionId);
+
+        /// <summary>
+        /// Revoke every session (and its refresh tokens) of a user, optionally keeping
+        /// one (the caller's own). Does NOT commit — the caller saves, so the
+        /// revocation lands atomically with the credential change that triggered it.
+        /// </summary>
+        Task RevokeAllSessionsAsync(Guid userId, Guid? exceptSessionId = null);
     }
 
     public class SessionService(AppDbContext db, IJwtService jwtService, IOptions<JwtOptions> jwtOptions) : ISessionService
@@ -127,6 +134,21 @@ namespace AuthService.Services
                 rt.Revoked = true;
 
             await db.SaveChangesAsync();
+        }
+
+        public async Task RevokeAllSessionsAsync(Guid userId, Guid? exceptSessionId = null)
+        {
+            var sessions = await db.Sessions
+                .Include(s => s.RefreshTokens)
+                .Where(s => s.UserId == userId && !s.Revoked && s.Id != exceptSessionId)
+                .ToListAsync();
+
+            foreach (var session in sessions)
+            {
+                session.Revoked = true;
+                foreach (var rt in session.RefreshTokens.Where(rt => !rt.Revoked))
+                    rt.Revoked = true;
+            }
         }
 
         private static string GenerateRefreshToken()

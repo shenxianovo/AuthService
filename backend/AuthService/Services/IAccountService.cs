@@ -55,6 +55,13 @@ namespace AuthService.Services
         Task<Result> AddPasswordAsync(Guid userId, string passwordHash);
 
         /// <summary>
+        /// Set the user's password unconditionally: overwrites an existing credential,
+        /// or creates one (plus the Password provider) when none exists. Used by the
+        /// password reset and change flows, where ownership was already proven.
+        /// </summary>
+        Task<Result> SetPasswordAsync(Guid userId, string passwordHash);
+
+        /// <summary>
         /// Merge all data from sourceUserId into targetUserId, then soft-delete the source.
         /// Migrates: AuthProviders, UserEmails (reassigned; global email uniqueness means
         /// no overlap is possible), Sessions, ApiKeys, PasswordCredential.
