@@ -189,6 +189,11 @@ namespace AuthService.Services
             foreach (var k in apiKeys)
                 k.UserId = targetUserId;
 
+            // Delete pending password resets — reset links issued for the merged-away
+            // account must die with it (same spirit as revoking its sessions).
+            var passwordResets = await db.PasswordResets.Where(r => r.UserId == sourceUserId).ToListAsync();
+            db.PasswordResets.RemoveRange(passwordResets);
+
             // Move PasswordCredential (only if target doesn't have one).
             // UserId is the PK (1:1), so we delete the source and recreate for target.
             var sourcePassword = await db.PasswordCredentials.FindAsync(sourceUserId);
