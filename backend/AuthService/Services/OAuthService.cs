@@ -12,9 +12,9 @@ namespace AuthService.Services
 
     /// <summary>
     /// Resolves an OAuth provider callback to a user account. This is the decision
-    /// layer: it queries to determine which account the login maps to and what
-    /// action is needed (login / link / merge / create), then delegates the writes
-    /// to <see cref="IAccountService"/> and commits once.
+    /// layer: it gathers the facts the resolution depends on, lets the pure decision
+    /// tree (<see cref="OAuthResolver"/>) pick an action, then applies it via
+    /// <see cref="IAccountService"/> and commits once.
     /// </summary>
     public class OAuthService(AppDbContext db, IAccountService account) : IOAuthService
     {
@@ -27,103 +27,102 @@ namespace AuthService.Services
             string? providerLogin = null,
             bool emailVerified = false)
         {
-            var resolution = await ResolveAsync(provider, providerUserId, email, displayName, currentUserId, providerLogin, emailVerified);
-            if (!resolution.IsSuccess)
-                return resolution;
+            var (facts, users) = await GatherFactsAsync(provider, providerUserId, email, currentUserId);
+            var decision = OAuthResolver.Decide(facts);
+
+            var result = await ApplyAsync(decision, users, provider, providerUserId, email, displayName, providerLogin, emailVerified);
+            if (!result.IsSuccess)
+                return result;
 
             await db.SaveChangesAsync();
-            return resolution;
+            return result;
         }
         // APPEND_MARKER
 
-        /// <summary>
-        /// Pure decision: resolve which account this OAuth login maps to and apply
-        /// the corresponding account write (login / link / merge / create) via
-        /// IAccountService. Does not commit — the caller does.
-        /// </summary>
-        private async Task<Result<User>> ResolveAsync(
+        private sealed record LoadedUsers(User? LinkedUser, User? CurrentUser, User? EmailOwner);
+
+        private async Task<(OAuthFacts Facts, LoadedUsers Users)> GatherFactsAsync(
             AuthProviderType provider,
             string providerUserId,
             string? email,
-            string displayName,
-            Guid? currentUserId,
-            string? providerLogin,
-            bool emailVerified)
+            Guid? currentUserId)
         {
             var existingLink = await db.AuthProviders
                 .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.Provider == provider && a.ProviderUserId == providerUserId);
 
-            // Case 1: provider already linked to a user.
-            if (existingLink is not null)
-            {
-                var linkedUser = existingLink.User;
-                if (linkedUser.IsDeleted)
-                    return Result<User>.Fail(AuthError.UserDeleted);
+            var currentUser = currentUserId.HasValue
+                ? await db.Users.FindAsync(currentUserId.Value)
+                : null;
 
-                // Binding flow: the provider belongs to a different user than the one
-                // currently logged in — merge the linked user into the current user.
-                if (currentUserId.HasValue && linkedUser.Id != currentUserId.Value)
-                {
-                    var currentUser = await db.Users.FindAsync(currentUserId.Value);
-                    if (currentUser is null)
-                        return Result<User>.Fail(AuthError.UserNotFoundForMerge);
-
-                    await account.MergeAsync(sourceUserId: linkedUser.Id, targetUserId: currentUser.Id);
-                    return Result<User>.Ok(currentUser);
-                }
-
-                return Result<User>.Ok(linkedUser);
-            }
-
-            // Case 2: provider not linked, binding flow — link it to the current user.
-            if (currentUserId.HasValue)
-            {
-                var linkResult = await account.AddProviderAsync(currentUserId.Value, provider, providerUserId, email, emailVerified);
-                if (!linkResult.IsSuccess)
-                    return linkResult;
-
-                // If the email belongs to another (live) user, merge them in.
-                if (!string.IsNullOrEmpty(email))
-                {
-                    var normalized = email.ToLowerInvariant();
-                    var emailOwner = await db.UserEmails
-                        .Include(e => e.User)
-                        .FirstOrDefaultAsync(e => e.Email == normalized);
-
-                    if (emailOwner is not null
-                        && emailOwner.UserId != currentUserId.Value
-                        && !emailOwner.User.IsDeleted)
-                    {
-                        await account.MergeAsync(sourceUserId: emailOwner.UserId, targetUserId: currentUserId.Value);
-                    }
-                }
-
-                return linkResult;
-            }
-
-            // Case 3: not binding — does the email match an existing user? Link to them.
+            UserEmail? emailOwner = null;
             if (!string.IsNullOrEmpty(email))
             {
-                var emailOwner = await db.UserEmails
+                var normalized = email.ToLowerInvariant();
+                emailOwner = await db.UserEmails
                     .Include(e => e.User)
-                    .FirstOrDefaultAsync(e => e.Email == email.ToLowerInvariant());
-
-                if (emailOwner is not null)
-                {
-                    if (emailOwner.User.IsDeleted)
-                        return Result<User>.Fail(AuthError.UserDeleted);
-
-                    // Email already belongs to this user — link the provider and, if the
-                    // provider asserts the email is verified, let AddProviderAsync upgrade
-                    // the existing row's VerifiedAt (it won't insert a duplicate).
-                    return await account.AddProviderAsync(emailOwner.UserId, provider, providerUserId, email, emailVerified);
-                }
+                    .FirstOrDefaultAsync(e => e.Email == normalized);
             }
 
-            // Case 4: brand new user.
-            var created = await account.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin, emailVerified);
-            return Result<User>.Ok(created);
+            var facts = new OAuthFacts
+            {
+                LinkedUserId = existingLink?.UserId,
+                LinkedUserDeleted = existingLink?.User.IsDeleted ?? false,
+                CurrentUserId = currentUserId,
+                CurrentUserExists = currentUser is not null,
+                EmailOwnerUserId = emailOwner?.UserId,
+                EmailOwnerDeleted = emailOwner?.User.IsDeleted ?? false,
+            };
+
+            return (facts, new LoadedUsers(existingLink?.User, currentUser, emailOwner?.User));
+        }
+
+        private async Task<Result<User>> ApplyAsync(
+            OAuthDecision decision,
+            LoadedUsers users,
+            AuthProviderType provider,
+            string providerUserId,
+            string? email,
+            string displayName,
+            string? providerLogin,
+            bool emailVerified)
+        {
+            switch (decision)
+            {
+                case OAuthDecision.Reject reject:
+                    return Result<User>.Fail(reject.Error);
+
+                case OAuthDecision.LoginAsLinked:
+                    return Result<User>.Ok(users.LinkedUser!);
+
+                case OAuthDecision.MergeLinkedIntoCurrent merge:
+                    await account.MergeAsync(sourceUserId: merge.LinkedUserId, targetUserId: merge.CurrentUserId);
+                    return Result<User>.Ok(users.CurrentUser!);
+
+                case OAuthDecision.LinkToCurrent link:
+                {
+                    var linkResult = await account.AddProviderAsync(link.CurrentUserId, provider, providerUserId, email, emailVerified);
+                    if (!linkResult.IsSuccess)
+                        return linkResult;
+
+                    if (link.MergeEmailOwnerUserId is Guid owner)
+                        await account.MergeAsync(sourceUserId: owner, targetUserId: link.CurrentUserId);
+
+                    return linkResult;
+                }
+
+                case OAuthDecision.LinkToEmailOwner adopt:
+                    // If the provider asserts the email is verified, AddProviderAsync
+                    // upgrades the existing row's VerifiedAt (it won't insert a duplicate).
+                    return await account.AddProviderAsync(adopt.EmailOwnerUserId, provider, providerUserId, email, emailVerified);
+
+                case OAuthDecision.CreateNewUser:
+                    var created = await account.CreateFromOAuthAsync(provider, providerUserId, email, displayName, providerLogin, emailVerified);
+                    return Result<User>.Ok(created);
+
+                default:
+                    throw new InvalidOperationException($"Unhandled OAuth decision: {decision.GetType().Name}");
+            }
         }
     }
 }
