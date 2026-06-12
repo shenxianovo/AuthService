@@ -6,24 +6,52 @@
       <div class="security-item">
         <div class="security-label">Password</div>
         <div class="security-status">
-          <span :class="userStore.userInfo.value.hasPassword ? 'status-set' : 'status-unset'">
-            {{ userStore.userInfo.value.hasPassword ? 'Password set' : 'No password' }}
+          <span :class="hasPassword ? 'status-set' : 'status-unset'">
+            {{ hasPassword ? 'Password set' : 'No password' }}
           </span>
         </div>
       </div>
 
-      <div class="form-row">
+      <!-- Change password: proof is the current password, other sessions get signed out -->
+      <form v-if="hasPassword" class="form" @submit.prevent="handleChangePassword">
+        <input
+          type="password"
+          v-model="currentPassword"
+          placeholder="Current password"
+          class="input"
+          autocomplete="current-password"
+          required
+        />
         <input
           type="password"
           v-model="newPassword"
-          :placeholder="userStore.userInfo.value.hasPassword ? 'Change password' : 'Set a password'"
+          placeholder="New password (min. 8 characters)"
           class="input"
-          @keyup.enter="handleAddPassword"
+          autocomplete="new-password"
+          minlength="8"
+          required
         />
-        <button class="btn btn-sm" @click="handleAddPassword" :disabled="loading || !newPassword">
-          {{ userStore.userInfo.value.hasPassword ? 'Update' : 'Set' }}
+        <button type="submit" class="btn btn-sm" :disabled="loading || !currentPassword || !newPassword">
+          Change password
         </button>
-      </div>
+        <p class="form-hint">Changing your password signs you out everywhere else.</p>
+      </form>
+
+      <!-- Set a first password (OAuth-only account): session is proof enough -->
+      <form v-else class="form" @submit.prevent="handleAddPassword">
+        <input
+          type="password"
+          v-model="newPassword"
+          placeholder="Set a password (min. 8 characters)"
+          class="input"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+        <button type="submit" class="btn btn-sm" :disabled="loading || !newPassword">
+          Set password
+        </button>
+      </form>
     </div>
 
     <div v-if="error" class="toast error">{{ error }}</div>
@@ -32,17 +60,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
 
 const loading = ref(false)
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
+const currentPassword = ref('')
 const newPassword = ref('')
 
+const hasPassword = computed(() => userStore.userInfo.value?.hasPassword ?? false)
+
+async function handleChangePassword() {
+  error.value = null
+  success.value = null
+  loading.value = true
+  try {
+    await api.changePassword(currentPassword.value, newPassword.value)
+    success.value = 'Password changed. Other sessions have been signed out.'
+    currentPassword.value = ''
+    newPassword.value = ''
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to change password'
+  } finally {
+    loading.value = false
+  }
+}
+
 async function handleAddPassword() {
-  if (!newPassword.value) return
   error.value = null
   success.value = null
   loading.value = true
@@ -104,6 +150,23 @@ onMounted(() => {
   color: #dc2626;
   font-weight: 500;
   font-size: 13px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+}
+
+.form .btn {
+  align-self: flex-start;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
 }
 
 .toast {

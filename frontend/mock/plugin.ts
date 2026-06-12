@@ -77,6 +77,31 @@ route('POST', '/api/v1/auth/logout', (_req, res) => {
   noContent(res)
 })
 
+// ─── Password reset / change ───────────────────────────────────────────────
+
+// Anti-enumeration contract: always 204, regardless of the email.
+route('POST', '/api/v1/auth/forgot-password', (_req, res) => {
+  noContent(res)
+})
+
+route('POST', '/api/v1/auth/reset-password', (req, res) => {
+  // Use token "expired" to exercise the error path in mock mode.
+  if (req.body?.token === 'expired') {
+    json(res, { message: 'Invalid or expired reset token.' }, 400)
+    return
+  }
+  noContent(res)
+})
+
+route('POST', '/api/v1/auth/change-password', (req, res) => {
+  // Use current password "wrong" to exercise the error path in mock mode.
+  if (req.body?.currentPassword === 'wrong') {
+    json(res, { message: 'Invalid credentials.' }, 401)
+    return
+  }
+  noContent(res)
+})
+
 // ─── User / profile ────────────────────────────────────────────────────────
 
 route('GET', '/api/v1/auth/me', (_req, res) => {

@@ -25,6 +25,10 @@
       @submit="handleLogin"
     />
 
+    <div class="forgot-link">
+      <router-link to="/forgot-password">Forgot password?</router-link>
+    </div>
+
     <div v-if="error" class="message error">{{ error }}</div>
   </div>
 </template>
@@ -104,4 +108,7 @@ function handleGoogleLogin() {
 .icon { width: 18px; height: 18px; flex-shrink: 0; }
 .message { margin-top: 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; text-align: center; }
 .message.error { background: #fff0f0; color: #dc3545; border: 1px solid #ffcdd2; }
+.forgot-link { margin-top: 12px; text-align: right; font-size: 13px; }
+.forgot-link a { color: #555; text-decoration: none; }
+.forgot-link a:hover { text-decoration: underline; }
 </style>

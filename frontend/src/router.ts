@@ -8,6 +8,8 @@ import LoginPage from '@/pages/LoginPage.vue'
 import RegisterPage from '@/pages/RegisterPage.vue'
 import VerifyEmailPage from '@/pages/VerifyEmailPage.vue'
 import OAuthCallbackPage from '@/pages/OAuthCallbackPage.vue'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage.vue'
+import ResetPasswordPage from '@/pages/ResetPasswordPage.vue'
 
 import ProfilePage from '@/pages/dashboard/ProfilePage.vue'
 import EmailsPage from '@/pages/dashboard/EmailsPage.vue'
@@ -33,6 +35,8 @@ const router = createRouter({
         { path: 'login', name: 'login', component: LoginPage },
         { path: 'register', name: 'register', component: RegisterPage },
         { path: 'verify-email', name: 'verify-email', component: VerifyEmailPage },
+        { path: 'forgot-password', name: 'forgot-password', component: ForgotPasswordPage },
+        { path: 'reset-password', name: 'reset-password', component: ResetPasswordPage },
       ],
     },
     {

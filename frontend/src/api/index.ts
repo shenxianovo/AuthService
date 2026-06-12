@@ -15,6 +15,9 @@ import {
   VerifyEmailRequest,
   AddEmailRequest,
   CreateApiKeyRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  ChangePasswordRequest,
 } from './client'
 
 export type {
@@ -156,6 +159,22 @@ export async function fetchMe() {
 
 export async function addPassword(password: string): Promise<void> {
   await userClient.addPassword({ password } as any)
+}
+
+// ---------- Password reset / change ----------
+
+/** Always resolves with 204 — the backend never reveals whether the email exists. */
+export async function forgotPassword(email: string): Promise<void> {
+  await passwordClient.forgotPassword(new ForgotPasswordRequest({ email }))
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await passwordClient.resetPassword(new ResetPasswordRequest({ token, newPassword }))
+}
+
+/** Requires the current password; signs out every other session on success. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await authPasswordClient.changePassword(new ChangePasswordRequest({ currentPassword, newPassword }))
 }
 
 // ---------- OAuth redirect URLs ----------
