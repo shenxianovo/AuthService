@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">Email Addresses</h1>
+    <PageHeader title="Email Addresses" description="Manage the email addresses linked to your account." />
 
     <Card v-if="userStore.userInfo.value">
       <CardContent class="space-y-4">
@@ -65,6 +65,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge, badgeVariants } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import PageHeader from '@/components/PageHeader.vue'
 import Toast from '@/components/Toast.vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'

@@ -39,7 +39,7 @@
         </div>
       </header>
 
-      <main class="flex-1 p-5 md:p-8 w-full max-w-[900px]">
+      <main class="flex-1 p-5 md:p-8 w-full max-w-[1100px]">
         <router-view />
       </main>
     </div>

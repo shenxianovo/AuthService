@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">API Keys</h1>
+    <PageHeader title="API Keys" description="Create and manage keys for programmatic access." />
 
     <Card>
       <CardContent>
@@ -21,6 +21,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
+import PageHeader from '@/components/PageHeader.vue'
 import Toast from '@/components/Toast.vue'
 import ApiKeysView from '@/components/ApiKeysView.vue'
 

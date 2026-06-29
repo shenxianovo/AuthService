@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">Profile</h1>
+    <PageHeader title="Profile" />
 
     <Card v-if="userStore.userInfo.value">
       <CardContent class="flex items-center gap-5">
@@ -19,6 +19,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { Card, CardContent } from '@/components/ui/card'
+import PageHeader from '@/components/PageHeader.vue'
 import { authStore } from '@/stores/auth'
 import { userStore } from '@/stores/user'
 

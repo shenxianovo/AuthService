@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-foreground mb-6">Linked Accounts</h1>
+    <PageHeader title="Linked Accounts" description="Connect third-party providers to sign in faster." />
 
     <Card v-if="userStore.userInfo.value">
       <CardContent class="space-y-4">
@@ -57,6 +57,7 @@ import { ref, computed, onMounted } from 'vue'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import PageHeader from '@/components/PageHeader.vue'
 import Toast from '@/components/Toast.vue'
 import { authStore } from '@/stores/auth'
 import { userStore } from '@/stores/user'
