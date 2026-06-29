@@ -1,0 +1,26 @@
+/* ============================================================
+   Base layer — resets and element defaults
+   ============================================================ */
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+    /* Always reserve the scrollbar gutter so pages with/without a scrollbar
+       keep the same content width — stops centered cards from shifting. */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply text-foreground;
+    background-color: var(--background);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}

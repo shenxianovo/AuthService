@@ -1,0 +1,10 @@
+/* ============================================================
+   Style entry — load order matters
+   tailwind core → animation utils → tokens → theme map → base
+   ============================================================ */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@import './tokens.css';
+@import './theme.css';
+@import './base.css';
