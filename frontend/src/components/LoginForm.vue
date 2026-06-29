@@ -1,18 +1,40 @@
 <template>
-  <form @submit.prevent="$emit('submit')">
-    <div class="form-group">
-      <input type="email" :value="email" @input="$emit('update:email', ($event.target as HTMLInputElement).value)" placeholder="Email address" class="input" required />
+  <form class="space-y-4" @submit.prevent="$emit('submit')">
+    <div class="space-y-2">
+      <Label for="login-email">Email</Label>
+      <Input
+        id="login-email"
+        type="email"
+        :model-value="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required
+        @update:model-value="$emit('update:email', String($event))"
+      />
     </div>
-    <div class="form-group">
-      <input type="password" :value="password" @input="$emit('update:password', ($event.target as HTMLInputElement).value)" placeholder="Password" class="input" required />
+    <div class="space-y-2">
+      <Label for="login-password">Password</Label>
+      <Input
+        id="login-password"
+        type="password"
+        :model-value="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+        required
+        @update:model-value="$emit('update:password', String($event))"
+      />
     </div>
-    <button type="submit" class="btn btn-primary" :disabled="loading">
+    <Button type="submit" class="w-full" :disabled="loading">
       {{ loading ? 'Signing in...' : 'Sign in' }}
-    </button>
+    </Button>
   </form>
 </template>
 
 <script setup lang="ts">
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
 defineProps<{
   email: string
   password: string
@@ -25,13 +47,3 @@ defineEmits<{
   'update:password': [value: string]
 }>()
 </script>
-
-<style scoped>
-.form-group { margin-bottom: 14px; }
-.input { width: 100%; padding: 12px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 14px; transition: border-color .2s; outline: none; background: #fafafa; }
-.input:focus { border-color: #333; background: #fff; }
-.btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
-.btn-primary { background: #1a1a2e; color: #fff; }
-.btn-primary:hover:not(:disabled) { background: #2d2d44; box-shadow: 0 4px 12px rgba(0,0,0,.15); transform: translateY(-1px); }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-</style>
