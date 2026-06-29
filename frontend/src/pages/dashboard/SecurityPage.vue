@@ -1,66 +1,67 @@
 <template>
-  <div class="page">
-    <h1 class="page-title">Security</h1>
+  <div>
+    <h1 class="text-2xl font-bold text-foreground mb-6">Security</h1>
 
-    <div class="card" v-if="userStore.userInfo.value">
-      <div class="security-item">
-        <div class="security-label">Password</div>
-        <div class="security-status">
-          <span :class="hasPassword ? 'status-set' : 'status-unset'">
+    <Card v-if="userStore.userInfo.value">
+      <CardContent class="space-y-4">
+        <div class="flex items-center justify-between px-3.5 py-3 rounded-lg bg-muted">
+          <span class="text-sm font-medium text-foreground/70">Password</span>
+          <span :class="hasPassword ? 'text-primary font-medium text-sm' : 'text-destructive font-medium text-sm'">
             {{ hasPassword ? 'Password set' : 'No password' }}
           </span>
         </div>
-      </div>
 
-      <!-- Change password: proof is the current password, other sessions get signed out -->
-      <form v-if="hasPassword" class="form" @submit.prevent="handleChangePassword">
-        <input
-          type="password"
-          v-model="currentPassword"
-          placeholder="Current password"
-          class="input"
-          autocomplete="current-password"
-          required
-        />
-        <input
-          type="password"
-          v-model="newPassword"
-          placeholder="New password (min. 8 characters)"
-          class="input"
-          autocomplete="new-password"
-          minlength="8"
-          required
-        />
-        <button type="submit" class="btn btn-sm" :disabled="loading || !currentPassword || !newPassword">
-          Change password
-        </button>
-        <p class="form-hint">Changing your password signs you out everywhere else.</p>
-      </form>
+        <!-- Change password: proof is the current password, other sessions get signed out -->
+        <form v-if="hasPassword" class="flex flex-col gap-2.5 max-w-[420px]" @submit.prevent="handleChangePassword">
+          <Input
+            v-model="currentPassword"
+            type="password"
+            placeholder="Current password"
+            autocomplete="current-password"
+            required
+          />
+          <Input
+            v-model="newPassword"
+            type="password"
+            placeholder="New password (min. 8 characters)"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          />
+          <Button type="submit" size="sm" class="self-start" :disabled="loading || !currentPassword || !newPassword">
+            Change password
+          </Button>
+          <p class="text-xs text-muted-foreground">Changing your password signs you out everywhere else.</p>
+        </form>
 
-      <!-- Set a first password (OAuth-only account): session is proof enough -->
-      <form v-else class="form" @submit.prevent="handleAddPassword">
-        <input
-          type="password"
-          v-model="newPassword"
-          placeholder="Set a password (min. 8 characters)"
-          class="input"
-          autocomplete="new-password"
-          minlength="8"
-          required
-        />
-        <button type="submit" class="btn btn-sm" :disabled="loading || !newPassword">
-          Set password
-        </button>
-      </form>
-    </div>
+        <!-- Set a first password (OAuth-only account): session is proof enough -->
+        <form v-else class="flex flex-col gap-2.5 max-w-[420px]" @submit.prevent="handleAddPassword">
+          <Input
+            v-model="newPassword"
+            type="password"
+            placeholder="Set a password (min. 8 characters)"
+            autocomplete="new-password"
+            minlength="8"
+            required
+          />
+          <Button type="submit" size="sm" class="self-start" :disabled="loading || !newPassword">
+            Set password
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
 
-    <div v-if="error" class="toast error">{{ error }}</div>
-    <div v-if="success" class="toast success">{{ success }}</div>
+    <Toast :message="error" variant="error" />
+    <Toast :message="success" variant="success" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import Toast from '@/components/Toast.vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
 
@@ -108,79 +109,3 @@ onMounted(() => {
   if (!userStore.userInfo.value) userStore.fetch()
 })
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0 0 24px;
-}
-
-.card {
-  background: #fff;
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.05);
-}
-
-.security-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  background: #f8f9fb;
-  border-radius: 10px;
-}
-
-.security-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #555;
-}
-
-.status-set {
-  color: #16a34a;
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.status-unset {
-  color: #dc2626;
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 420px;
-}
-
-.form .btn {
-  align-self: flex-start;
-}
-
-.form-hint {
-  font-size: 12px;
-  color: #888;
-  margin: 0;
-}
-
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0,0,0,.12);
-}
-.toast.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.toast.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-</style>

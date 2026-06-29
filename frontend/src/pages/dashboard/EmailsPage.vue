@@ -1,65 +1,71 @@
 <template>
-  <div class="page">
-    <h1 class="page-title">Email Addresses</h1>
+  <div>
+    <h1 class="text-2xl font-bold text-foreground mb-6">Email Addresses</h1>
 
-    <div class="card" v-if="userStore.userInfo.value">
-      <div class="email-list">
-        <div v-for="email in userStore.userInfo.value.emails" :key="email.email" class="list-item">
-          <div class="email-address">
-            <span class="email-text">{{ email.email }}</span>
-          </div>
-          <div class="email-badges">
-            <span v-if="email.isPrimary" class="badge badge-primary">Primary</span>
-            <span v-if="email.isVerified" class="badge badge-success">Verified</span>
-            <button
-              v-else
-              class="badge badge-warning badge-btn"
-              @click="handleVerifyEmail(email.email!)"
-              :disabled="loading"
-            >Verify</button>
-            <button
-              v-if="!email.isPrimary && email.isVerified"
-              class="badge badge-info badge-btn"
-              @click="handleSetPrimary(email.email!)"
-              :disabled="loading"
-            >Set Primary</button>
-            <button
-              v-if="!email.isPrimary"
-              class="btn-icon-sm btn-remove"
-              @click="handleRemove(email.email!)"
-              :disabled="loading"
-              title="Remove email"
-            >&#x2715;</button>
+    <Card v-if="userStore.userInfo.value">
+      <CardContent class="space-y-4">
+        <div class="flex flex-col gap-2">
+          <div
+            v-for="email in userStore.userInfo.value.emails"
+            :key="email.email"
+            class="flex items-center justify-between gap-3 flex-wrap px-3.5 py-2.5 rounded-lg bg-muted"
+          >
+            <span class="text-sm text-foreground break-all">{{ email.email }}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <Badge v-if="email.isPrimary" variant="secondary">Primary</Badge>
+              <Badge v-if="email.isVerified" variant="default">Verified</Badge>
+              <button
+                v-else
+                :class="cn(badgeVariants({ variant: 'outline' }), 'cursor-pointer border-amber-400 text-amber-600 hover:bg-amber-50 disabled:opacity-50')"
+                :disabled="loading"
+                @click="handleVerifyEmail(email.email!)"
+              >Verify</button>
+              <button
+                v-if="!email.isPrimary && email.isVerified"
+                :class="cn(badgeVariants({ variant: 'outline' }), 'cursor-pointer hover:bg-accent disabled:opacity-50')"
+                :disabled="loading"
+                @click="handleSetPrimary(email.email!)"
+              >Set Primary</button>
+              <button
+                v-if="!email.isPrimary"
+                class="inline-flex items-center justify-center size-[22px] rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-40"
+                :disabled="loading"
+                title="Remove email"
+                @click="handleRemove(email.email!)"
+              >&#x2715;</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="form-row">
-        <input
-          type="email"
-          v-model="newEmail"
-          placeholder="Add new email address..."
-          class="input"
-          @keyup.enter="handleAdd"
-          :disabled="loading"
-        />
-        <button
-          class="btn btn-sm"
-          @click="handleAdd"
-          :disabled="loading || !newEmail.trim()"
-        >Add</button>
-      </div>
-      <p v-if="emailError" class="error-text">{{ emailError }}</p>
-    </div>
+        <div class="flex gap-2 items-center">
+          <Input
+            v-model="newEmail"
+            type="email"
+            placeholder="Add new email address..."
+            class="flex-1"
+            :disabled="loading"
+            @keyup.enter="handleAdd"
+          />
+          <Button size="sm" :disabled="loading || !newEmail.trim()" @click="handleAdd">Add</Button>
+        </div>
+        <p v-if="emailError" class="text-xs text-destructive">{{ emailError }}</p>
+      </CardContent>
+    </Card>
 
-    <div v-if="error" class="toast error">{{ error }}</div>
-    <div v-if="success" class="toast success">{{ success }}</div>
+    <Toast :message="error" variant="error" />
+    <Toast :message="success" variant="success" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { cn } from '@/lib/utils'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge, badgeVariants } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import Toast from '@/components/Toast.vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
 
@@ -86,7 +92,6 @@ async function handleAdd() {
     await api.addEmail(email)
     newEmail.value = ''
     await userStore.fetch()
-    // Navigate to verify-email with the new email
     router.push({ name: 'verify-email', query: { email, emailId: email } })
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to add email'
@@ -139,54 +144,3 @@ onMounted(() => {
   if (!userStore.userInfo.value) userStore.fetch()
 })
 </script>
-
-<style scoped>
-.page-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0 0 24px;
-}
-
-.card {
-  background: #fff;
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.05);
-}
-
-.email-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.email-text {
-  font-size: 14px;
-  color: #333;
-  word-break: break-all;
-}
-
-.email-badges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0,0,0,.12);
-}
-.toast.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.toast.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-</style>

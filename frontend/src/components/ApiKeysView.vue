@@ -1,63 +1,73 @@
 <template>
-  <div>
+  <div class="space-y-4">
     <!-- Newly created key alert -->
-    <div v-if="newlyCreatedKey" class="new-key-alert">
-      <div class="new-key-header">
+    <div v-if="newlyCreatedKey" class="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-2.5">
+      <div class="flex items-center gap-2 text-sm text-amber-800">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <strong>Copy your API key now — it won't be shown again!</strong>
       </div>
-      <div class="new-key-value" @click="copyKey">
-        <code>{{ newlyCreatedKey }}</code>
-        <span class="copy-hint">{{ copied ? '✓ Copied' : 'Click to copy' }}</span>
+      <div
+        class="flex items-center justify-between gap-3 rounded-md bg-slate-900 px-3.5 py-3 font-mono text-xs text-emerald-400 cursor-pointer hover:bg-slate-800 transition-colors break-all"
+        @click="copyKey"
+      >
+        <code class="flex-1 min-w-0">{{ newlyCreatedKey }}</code>
+        <span class="text-[11px] text-slate-400 whitespace-nowrap shrink-0">{{ copied ? '✓ Copied' : 'Click to copy' }}</span>
       </div>
-      <button class="btn-dismiss" @click="newlyCreatedKey = null">Dismiss</button>
+      <Button variant="outline" size="sm" @click="newlyCreatedKey = null">Dismiss</Button>
     </div>
 
     <!-- Key list -->
-    <div v-if="keys.length" class="key-list">
-      <div v-for="key in keys" :key="key.id" class="list-item" :class="{ revoked: key.isRevoked }">
-        <div class="key-info">
-          <span class="key-name">{{ key.name }}</span>
-          <code class="key-prefix">{{ key.prefix }}</code>
+    <div v-if="keys.length" class="flex flex-col gap-2">
+      <div
+        v-for="key in keys"
+        :key="key.id"
+        :class="cn(
+          'flex items-center justify-between gap-3 flex-wrap px-3.5 py-2.5 rounded-lg bg-muted',
+          key.isRevoked && 'opacity-55',
+        )"
+      >
+        <div class="flex items-center gap-2.5 flex-1 min-w-0">
+          <span class="text-sm font-medium text-foreground">{{ key.name }}</span>
+          <code class="text-xs text-muted-foreground font-mono bg-secondary px-2 py-0.5 rounded">{{ key.prefix }}</code>
         </div>
-        <div class="key-meta">
-          <span class="key-date">Created {{ formatDate(key.createdAt) }}</span>
-          <span v-if="key.lastUsedAt" class="key-date">· Last used {{ formatDate(key.lastUsedAt) }}</span>
-          <span v-if="key.isRevoked" class="badge badge-revoked">Revoked</span>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs text-muted-foreground">Created {{ formatDate(key.createdAt) }}</span>
+          <span v-if="key.lastUsedAt" class="text-xs text-muted-foreground">· Last used {{ formatDate(key.lastUsedAt) }}</span>
+          <Badge v-if="key.isRevoked" variant="destructive">Revoked</Badge>
         </div>
         <button
           v-if="!key.isRevoked"
-          class="btn-icon-sm btn-remove"
-          @click="handleRevoke(key.id!, key.name!)"
+          class="inline-flex items-center justify-center size-[22px] rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-40"
           :disabled="loading"
           title="Revoke key"
-        >✕</button>
+          @click="handleRevoke(key.id!, key.name!)"
+        >&#x2715;</button>
       </div>
     </div>
-    <p v-else class="empty-state">No API keys yet</p>
+    <p v-else class="text-sm text-muted-foreground">No API keys yet</p>
 
     <!-- Create new key -->
-    <div class="form-row">
-      <input
-        type="text"
+    <div class="flex gap-2 items-center">
+      <Input
         v-model="newKeyName"
+        type="text"
         placeholder="Key name (e.g. Heartbeat Agent)"
-        class="input"
-        @keyup.enter="handleCreate"
+        class="flex-1"
         :disabled="loading"
         maxlength="100"
+        @keyup.enter="handleCreate"
       />
-      <button
-        class="btn btn-sm"
-        @click="handleCreate"
-        :disabled="loading || !newKeyName.trim()"
-      >Create</button>
+      <Button size="sm" :disabled="loading || !newKeyName.trim()" @click="handleCreate">Create</Button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import * as api from '@/api'
 import type { ApiKeyListItem, CreateApiKeyResponse } from '@/api'
 
@@ -132,124 +142,3 @@ function formatDate(date: unknown): string {
 
 onMounted(loadKeys)
 </script>
-
-<style scoped>
-.new-key-alert {
-  background: #fffbeb;
-  border: 1px solid #fbbf24;
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-}
-
-.new-key-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #92400e;
-  margin-bottom: 10px;
-}
-
-.new-key-value {
-  background: #1a1a2e;
-  color: #4ade80;
-  padding: 12px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  word-break: break-all;
-  transition: background .15s;
-}
-
-.new-key-value:hover {
-  background: #2d2d44;
-}
-
-.new-key-value code {
-  flex: 1;
-  min-width: 0;
-}
-
-.copy-hint {
-  font-size: 11px;
-  color: #94a3b8;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.btn-dismiss {
-  margin-top: 10px;
-  padding: 4px 12px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #666;
-  cursor: pointer;
-  transition: all .15s;
-}
-
-.btn-dismiss:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
-}
-
-.key-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.revoked {
-  opacity: 0.55;
-}
-
-.key-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.key-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-}
-
-.key-prefix {
-  font-size: 12px;
-  color: #888;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  background: #eef0f2;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.key-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.key-date {
-  font-size: 12px;
-  color: #999;
-}
-
-@media (max-width: 600px) {
-  .new-key-value {
-    flex-direction: column;
-    gap: 8px;
-  }
-}
-</style>
