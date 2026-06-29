@@ -1,7 +1,7 @@
 <template>
-  <div class="callback-page">
-    <div v-if="error" class="message error">{{ error }}</div>
-    <p v-else class="loading-text">Completing sign in...</p>
+  <div class="min-h-screen flex items-center justify-center p-5">
+    <div v-if="error" class="px-6 py-4 rounded-lg text-sm bg-destructive/10 text-destructive border border-destructive/20">{{ error }}</div>
+    <p v-else class="text-base text-muted-foreground">Completing sign in...</p>
   </div>
 </template>
 
@@ -65,31 +65,3 @@ onMounted(async () => {
   }
 })
 </script>
-
-<style scoped>
-.callback-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f0f1f3;
-  padding: 20px;
-}
-
-.loading-text {
-  font-size: 16px;
-  color: #555;
-}
-
-.message {
-  padding: 16px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
-.message.error {
-  background: #fff0f0;
-  color: #dc3545;
-  border: 1px solid #ffcdd2;
-}
-</style>

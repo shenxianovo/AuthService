@@ -1,37 +1,39 @@
 <template>
   <div>
-    <h2 class="title">Reset password</h2>
+    <h2 class="text-xl font-bold text-foreground mb-2">Reset password</h2>
 
-    <div v-if="!token" class="message error">
+    <div v-if="!token" class="mt-4 px-3.5 py-3 rounded-md text-sm leading-relaxed bg-destructive/10 text-destructive border border-destructive/20">
       This reset link is missing its token. Request a new one from the
-      <router-link to="/forgot-password">forgot password</router-link> page.
+      <router-link to="/forgot-password" class="underline">forgot password</router-link> page.
     </div>
 
     <template v-else-if="!done">
-      <p class="hint">Choose a new password. You'll be signed out everywhere else.</p>
-      <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <input type="password" v-model="newPassword" placeholder="New password (min. 8 characters)" class="input" minlength="8" required />
+      <p class="text-sm text-muted-foreground mb-5">Choose a new password. You'll be signed out everywhere else.</p>
+      <form class="space-y-4" @submit.prevent="handleSubmit">
+        <div class="space-y-2">
+          <Label for="new-password">New password</Label>
+          <Input id="new-password" v-model="newPassword" type="password" placeholder="Min. 8 characters" minlength="8" autocomplete="new-password" required />
         </div>
-        <div class="form-group">
-          <input type="password" v-model="confirmPassword" placeholder="Confirm new password" class="input" minlength="8" required />
+        <div class="space-y-2">
+          <Label for="confirm-password">Confirm password</Label>
+          <Input id="confirm-password" v-model="confirmPassword" type="password" placeholder="Re-enter new password" minlength="8" autocomplete="new-password" required />
         </div>
-        <button type="submit" class="btn btn-primary" :disabled="loading || !newPassword || !confirmPassword">
+        <Button type="submit" class="w-full" :disabled="loading || !newPassword || !confirmPassword">
           {{ loading ? 'Resetting...' : 'Reset password' }}
-        </button>
+        </Button>
       </form>
-      <div v-if="error" class="message error">{{ error }}</div>
+      <div v-if="error" class="mt-4 px-3.5 py-3 rounded-md text-sm bg-destructive/10 text-destructive border border-destructive/20">{{ error }}</div>
     </template>
 
     <template v-else>
-      <div class="message success">
+      <div class="px-3.5 py-3 rounded-md text-sm leading-relaxed bg-primary-soft text-primary-dark border border-primary/20">
         Your password has been reset and all sessions signed out.
-        <router-link to="/login">Sign in with your new password</router-link>.
+        <router-link to="/login" class="underline">Sign in with your new password</router-link>.
       </div>
     </template>
 
-    <div class="back-link">
-      <router-link to="/login">Back to sign in</router-link>
+    <div class="mt-5 text-center text-sm">
+      <router-link to="/login" class="text-muted-foreground hover:text-foreground hover:underline">Back to sign in</router-link>
     </div>
   </div>
 </template>
@@ -39,6 +41,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import * as api from '@/api'
 
 const route = useRoute()
@@ -67,21 +72,3 @@ async function handleSubmit() {
   }
 }
 </script>
-
-<style scoped>
-.title { font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 0 0 8px; }
-.hint { font-size: 13px; color: #888; margin: 0 0 20px; }
-.form-group { margin-bottom: 14px; }
-.input { width: 100%; padding: 12px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 14px; transition: border-color .2s; outline: none; background: #fafafa; }
-.input:focus { border-color: #333; background: #fff; }
-.btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
-.btn-primary { background: #1a1a2e; color: #fff; }
-.btn-primary:hover:not(:disabled) { background: #2d2d44; box-shadow: 0 4px 12px rgba(0,0,0,.15); transform: translateY(-1px); }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-.message { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
-.message.error { background: #fff0f0; color: #dc3545; border: 1px solid #ffcdd2; }
-.message.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-.back-link { margin-top: 20px; text-align: center; font-size: 13px; }
-.back-link a { color: #555; text-decoration: none; }
-.back-link a:hover { text-decoration: underline; }
-</style>
