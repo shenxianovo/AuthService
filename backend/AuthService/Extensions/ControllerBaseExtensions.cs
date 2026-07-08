@@ -57,6 +57,8 @@ namespace AuthService.Extensions
                 [AuthError.InvalidVerificationCode] = (StatusCodes.Status400BadRequest, "Invalid or expired verification code."),
 
                 [AuthError.VerificationRateLimited] = (StatusCodes.Status429TooManyRequests, "Please try again later."),
+
+                [AuthError.CannotDemoteLastAdmin] = (StatusCodes.Status400BadRequest, "Cannot demote the last admin."),
             }.ToFrozenDictionary();
 
         /// <summary>All mapped errors — used by the guard test to assert completeness.</summary>

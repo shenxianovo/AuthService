@@ -73,6 +73,15 @@ builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSectio
 builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.Section));
 builder.Services.AddHostedService<OidcClientSeeder>();
 
+// Admin surface: DB-checked policy (Role never rides in a token, see ADR-017)
+builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.Section));
+builder.Services.AddHostedService<AdminBootstrapper>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AdminRequirementHandler>();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(AuthConstants.AdminPolicy, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new AdminRequirement())));
+
 // CORS only for the OIDC endpoints; origins derive from registered clients.
 builder.Services.AddCors();
 builder.Services.AddSingleton<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider, OidcCorsPolicyProvider>();

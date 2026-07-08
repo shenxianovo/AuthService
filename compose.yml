@@ -42,6 +42,8 @@ services:
       # OIDC provider (OpenIddict)
       Oidc__EncryptionKey: ${OIDC_ENCRYPTION_KEY}
       Oidc__Clients__0__ClientSecret: ${OPENLIST_CLIENT_SECRET}
+      # Bootstrap admin (promoted idempotently at startup)
+      Admin__BootstrapUsername: ${ADMIN_BOOTSTRAP_USERNAME}
     secrets:
       - jwt_private
       - jwt_public

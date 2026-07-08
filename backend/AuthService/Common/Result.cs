@@ -93,5 +93,7 @@ namespace AuthService.Common
         InvalidVerificationCode,
 
         VerificationRateLimited,
+
+        CannotDemoteLastAdmin,
     }
 }
