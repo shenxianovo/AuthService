@@ -38,6 +38,7 @@ namespace AuthService.Tests.Fixtures
         {
             var options = new DbContextOptionsBuilder<AppDbContext>()
                 .UseNpgsql(ConnectionString)
+                .UseOpenIddict()
                 .Options;
             return new AppDbContext(options);
         }

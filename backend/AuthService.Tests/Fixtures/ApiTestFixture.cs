@@ -41,13 +41,16 @@ namespace AuthService.Tests.Fixtures
                         if (keyDescriptor != null) services.Remove(keyDescriptor);
                         services.AddSingleton<IRsaKeyProvider, InMemoryRsaKeyProvider>();
 
-                        // Remove all DbContext and EF Core related registrations
+                        // Remove all DbContext and EF Core related registrations.
+                        // OpenIddict's EF Core stores live in the OpenIddict.EntityFrameworkCore
+                        // namespace but must survive this sweep — they are provider-agnostic.
                         var efServiceTypes = services
                             .Where(d => d.ServiceType.FullName != null &&
                                        (d.ServiceType == typeof(DbContextOptions<AppDbContext>)
                                      || d.ServiceType == typeof(DbContextOptions)
                                      || d.ServiceType == typeof(AppDbContext)
-                                     || d.ServiceType.FullName.Contains("EntityFrameworkCore")))
+                                     || (d.ServiceType.FullName.Contains("EntityFrameworkCore")
+                                      && !d.ServiceType.FullName.StartsWith("OpenIddict"))))
                             .ToList();
                         foreach (var d in efServiceTypes)
                             services.Remove(d);
@@ -55,7 +58,7 @@ namespace AuthService.Tests.Fixtures
                         // Add InMemory database with unique name per fixture instance
                         var dbName = $"TestDb-{Guid.NewGuid()}";
                         services.AddDbContext<AppDbContext>(options =>
-                            options.UseInMemoryDatabase(dbName));
+                            options.UseInMemoryDatabase(dbName).UseOpenIddict());
 
                         // Replace real email service with a recording no-op fake
                         // (tests don't send emails, but can read what would be sent).
