@@ -41,6 +41,12 @@ namespace AuthService.Tests.Fixtures
                             ["Oidc:Clients:0:RedirectUris:0"] = "https://client.example.com/api/auth/sso_callback",
                             ["Oidc:Clients:0:Scopes:0"] = "profile",
                             ["Oidc:Clients:0:Scopes:1"] = "email",
+                            // Public (SPA) client: no secret, PKCE enforced per client.
+                            ["Oidc:Clients:1:ClientId"] = "test-spa",
+                            ["Oidc:Clients:1:DisplayName"] = "Test SPA",
+                            ["Oidc:Clients:1:Type"] = "public",
+                            ["Oidc:Clients:1:RedirectUris:0"] = "https://spa.example.com/callback",
+                            ["Oidc:Clients:1:Scopes:0"] = "profile",
                         });
                     });
 

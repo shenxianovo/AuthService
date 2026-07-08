@@ -21,8 +21,17 @@ namespace AuthService.Configuration
     public class OidcClientOptions
     {
         public string ClientId { get; set; } = null!;
-        public string ClientSecret { get; set; } = null!;
+
+        /// <summary>Required for confidential clients; must be empty for public ones.</summary>
+        public string ClientSecret { get; set; } = string.Empty;
+
         public string DisplayName { get; set; } = null!;
+
+        /// <summary>
+        /// "confidential" (default; server-side client with a secret) or "public"
+        /// (browser/native client, no secret, PKCE enforced per client).
+        /// </summary>
+        public string Type { get; set; } = "confidential";
 
         /// <summary>
         /// Exact-match redirect URIs, query string included. OpenList calls back on

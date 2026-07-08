@@ -28,10 +28,14 @@ namespace AuthService.Services
 
             foreach (var client in clients)
             {
+                var isPublic = string.Equals(client.Type, "public", StringComparison.OrdinalIgnoreCase);
+
                 // appsettings.json ships the client skeleton with an empty secret;
                 // the real secret lives in user-secrets/env. Until it's provided the
                 // client simply isn't registered (confidential clients need a secret).
-                if (string.IsNullOrEmpty(client.ClientId) || string.IsNullOrEmpty(client.ClientSecret))
+                // Public clients (browser/native) never have a secret.
+                if (string.IsNullOrEmpty(client.ClientId)
+                    || (!isPublic && string.IsNullOrEmpty(client.ClientSecret)))
                 {
                     logger.LogWarning(
                         "Skipping OIDC client '{ClientId}': ClientId/ClientSecret not configured.",
@@ -41,9 +45,9 @@ namespace AuthService.Services
                 var descriptor = new OpenIddictApplicationDescriptor
                 {
                     ClientId = client.ClientId,
-                    ClientSecret = client.ClientSecret,
+                    ClientSecret = isPublic ? null : client.ClientSecret,
                     DisplayName = client.DisplayName,
-                    ClientType = ClientTypes.Confidential,
+                    ClientType = isPublic ? ClientTypes.Public : ClientTypes.Confidential,
                     // First-party, self-hosted clients: skip the consent screen.
                     ConsentType = ConsentTypes.Implicit,
                     Permissions =
@@ -55,6 +59,11 @@ namespace AuthService.Services
                         Permissions.ResponseTypes.Code,
                     },
                 };
+
+                // A public client's code flow is only safe with PKCE; requiring it
+                // per client prevents downgrade to a bare code exchange.
+                if (isPublic)
+                    descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
 
                 foreach (var scopeName in client.Scopes)
                     descriptor.Permissions.Add(Permissions.Prefixes.Scope + scopeName);

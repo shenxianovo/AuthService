@@ -73,6 +73,10 @@ builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSectio
 builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.Section));
 builder.Services.AddHostedService<OidcClientSeeder>();
 
+// CORS only for the OIDC endpoints; origins derive from registered clients.
+builder.Services.AddCors();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider, OidcCorsPolicyProvider>();
+
 // Password hasher (uses ASP.NET Core Identity's battle-tested implementation)
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -216,6 +220,10 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 // NSwag: serve OpenAPI spec + Swagger UI (all environments; restrict in prod if needed)
 app.UseOpenApi();      // /swagger/v1/swagger.json
 app.UseSwaggerUi();   // /swagger
+
+// CORS must run before UseAuthentication: OpenIddict serves /connect/token and
+// /.well-known/* from inside the authentication middleware.
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
