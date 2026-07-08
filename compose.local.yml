@@ -1,0 +1,27 @@
+# Full-stack local e2e: builds both images from local sources instead of ghcr,
+# with self-contained dev-only credentials (no .env needed).
+#
+#   1. One-time: generate dev RSA keys into ./secrets/ (see README "Local development")
+#   2. docker compose -f compose.yml -f compose.local.yml up --build
+#   3. open http://localhost:8080
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: localdev
+
+  backend:
+    image: authservice-backend:local
+    build:
+      context: ./backend
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=authservice;Username=authservice;Password=localdev"
+      Jwt__Issuer: http://localhost:8080
+      Jwt__Audience: http://localhost:8080
+      # Dev-only values — never reuse in production.
+      Oidc__EncryptionKey: "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4="
+      Oidc__Clients__0__ClientSecret: local-dev-secret
+
+  frontend:
+    image: authservice-frontend:local
+    build:
+      context: ./frontend

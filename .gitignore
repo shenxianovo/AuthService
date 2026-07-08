@@ -130,6 +130,9 @@ web_modules/
 .env.*
 !.env.example
 
+# compose secrets (RSA key pair) — dev keys are generated locally, prod keys live on the server
+secrets/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
