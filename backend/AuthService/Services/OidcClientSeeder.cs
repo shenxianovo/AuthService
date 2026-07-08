@@ -28,7 +28,7 @@ namespace AuthService.Services
 
             foreach (var client in clients)
             {
-                var isPublic = string.Equals(client.Type, "public", StringComparison.OrdinalIgnoreCase);
+                var isPublic = OidcClientDescriptors.IsPublicType(client.Type);
 
                 // appsettings.json ships the client skeleton with an empty secret;
                 // the real secret lives in user-secrets/env. Until it's provided the
@@ -42,34 +42,10 @@ namespace AuthService.Services
                         client.ClientId);
                     continue;
                 }
-                var descriptor = new OpenIddictApplicationDescriptor
-                {
-                    ClientId = client.ClientId,
-                    ClientSecret = isPublic ? null : client.ClientSecret,
-                    DisplayName = client.DisplayName,
-                    ClientType = isPublic ? ClientTypes.Public : ClientTypes.Confidential,
-                    // First-party, self-hosted clients: skip the consent screen.
-                    ConsentType = ConsentTypes.Implicit,
-                    Permissions =
-                    {
-                        Permissions.Endpoints.Authorization,
-                        Permissions.Endpoints.Token,
-                        Permissions.GrantTypes.AuthorizationCode,
-                        Permissions.GrantTypes.RefreshToken,
-                        Permissions.ResponseTypes.Code,
-                    },
-                };
 
-                // A public client's code flow is only safe with PKCE; requiring it
-                // per client prevents downgrade to a bare code exchange.
-                if (isPublic)
-                    descriptor.Requirements.Add(Requirements.Features.ProofKeyForCodeExchange);
-
-                foreach (var scopeName in client.Scopes)
-                    descriptor.Permissions.Add(Permissions.Prefixes.Scope + scopeName);
-
-                foreach (var uri in client.RedirectUris)
-                    descriptor.RedirectUris.Add(new Uri(uri));
+                var descriptor = OidcClientDescriptors.Build(
+                    client.ClientId, client.ClientSecret, client.DisplayName,
+                    isPublic, client.RedirectUris, client.Scopes);
 
                 var existing = await manager.FindByClientIdAsync(client.ClientId, cancellationToken);
                 if (existing is null)

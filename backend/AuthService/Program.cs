@@ -77,6 +77,7 @@ builder.Services.AddHostedService<OidcClientSeeder>();
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.Section));
 builder.Services.AddHostedService<AdminBootstrapper>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IOidcClientAdminService, OidcClientAdminService>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AdminRequirementHandler>();
 builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthConstants.AdminPolicy, policy =>

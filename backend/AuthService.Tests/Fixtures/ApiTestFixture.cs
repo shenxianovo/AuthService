@@ -3,6 +3,7 @@ using AuthService.Data;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -72,10 +73,14 @@ namespace AuthService.Tests.Fixtures
                         foreach (var d in efServiceTypes)
                             services.Remove(d);
 
-                        // Add InMemory database with unique name per fixture instance
+                        // Add InMemory database with unique name per fixture instance.
+                        // OpenIddict's EF store wraps deletes in a transaction; InMemory
+                        // throws on transactions unless the warning is suppressed.
                         var dbName = $"TestDb-{Guid.NewGuid()}";
                         services.AddDbContext<AppDbContext>(options =>
-                            options.UseInMemoryDatabase(dbName).UseOpenIddict());
+                            options.UseInMemoryDatabase(dbName)
+                                .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+                                .UseOpenIddict());
 
                         // Replace real email service with a recording no-op fake
                         // (tests don't send emails, but can read what would be sent).

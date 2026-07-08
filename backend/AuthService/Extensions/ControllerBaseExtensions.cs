@@ -59,6 +59,9 @@ namespace AuthService.Extensions
                 [AuthError.VerificationRateLimited] = (StatusCodes.Status429TooManyRequests, "Please try again later."),
 
                 [AuthError.CannotDemoteLastAdmin] = (StatusCodes.Status400BadRequest, "Cannot demote the last admin."),
+                [AuthError.OidcClientAlreadyExists] = (StatusCodes.Status409Conflict, "An OIDC client with this id already exists."),
+                [AuthError.OidcClientNotFound] = (StatusCodes.Status404NotFound, "OIDC client not found."),
+                [AuthError.InvalidOidcClient] = (StatusCodes.Status400BadRequest, "Invalid OIDC client definition."),
             }.ToFrozenDictionary();
 
         /// <summary>All mapped errors — used by the guard test to assert completeness.</summary>

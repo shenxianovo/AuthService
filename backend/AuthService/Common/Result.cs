@@ -95,5 +95,8 @@ namespace AuthService.Common
         VerificationRateLimited,
 
         CannotDemoteLastAdmin,
+        OidcClientAlreadyExists,
+        OidcClientNotFound,
+        InvalidOidcClient,
     }
 }
