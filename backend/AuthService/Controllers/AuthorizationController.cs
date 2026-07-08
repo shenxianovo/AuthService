@@ -59,11 +59,14 @@ namespace AuthService.Controllers
                     .SetClaim(Claims.Name, user.Username)
                     .SetClaim(Claims.PreferredUsername, user.Username);
 
-            var primaryEmail = user.Emails.FirstOrDefault(e => e.IsPrimary) ?? user.Emails.FirstOrDefault();
-            if (primaryEmail is not null)
+            // Only a verified primary email is asserted to downstream clients —
+            // registration doesn't require verification, and off-the-shelf RPs
+            // can't be trusted to check email_verified (mirror of ADR-012).
+            var verifiedEmail = user.Emails.FirstOrDefault(e => e.IsPrimary && e.VerifiedAt != null);
+            if (verifiedEmail is not null)
             {
-                identity.SetClaim(Claims.Email, primaryEmail.Email);
-                identity.SetClaim(Claims.EmailVerified, primaryEmail.VerifiedAt != null);
+                identity.SetClaim(Claims.Email, verifiedEmail.Email);
+                identity.SetClaim(Claims.EmailVerified, true);
             }
 
             // Seeded clients use implicit consent, so no consent screen is shown.

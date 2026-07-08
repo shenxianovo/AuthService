@@ -47,7 +47,11 @@ rather than hand-rolling the protocol or deploying a separate IdP (Keycloak).
   calls back with `?method=...` variants).
 - **Claims**: the username is emitted as both `name` and `preferred_username`
   in the id_token so either OpenList "username key" setting works; email
-  claims travel only in id_token/userinfo under the `email` scope.
+  claims travel only in id_token/userinfo under the `email` scope, and **only
+  when the primary email is verified** — registration doesn't require
+  verification, and off-the-shelf RPs can't be trusted to check
+  `email_verified` (mirror of the [ADR-012](adr-012-oauth-email-verification-trust.md)
+  trust boundary). An unverified address is never asserted downstream.
 
 ## Consequences
 

@@ -7,6 +7,7 @@ using AuthService.Services;
 using AuthService.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
@@ -94,12 +95,15 @@ namespace AuthService.Tests.Integration.Oidc
             var idToken = tokens.GetProperty("id_token").GetString()!;
 
             // 3. The id_token carries the username under both keys OpenList understands.
+            //    The email is absent: registration leaves it unverified, and only a
+            //    verified primary email is asserted to downstream clients.
             var payload = JsonDocument.Parse(
                 Base64UrlEncoder.DecodeBytes(idToken.Split('.')[1])).RootElement;
             Assert.Equal(auth.UserId.ToString(), payload.GetProperty("sub").GetString());
             Assert.Equal(auth.Username, payload.GetProperty("name").GetString());
             Assert.Equal(auth.Username, payload.GetProperty("preferred_username").GetString());
-            Assert.Equal(email, payload.GetProperty("email").GetString());
+            Assert.False(payload.TryGetProperty("email", out _));
+            Assert.False(payload.TryGetProperty("email_verified", out _));
 
             // 4. Userinfo with the OIDC access token.
             var userinfoRequest = new HttpRequestMessage(HttpMethod.Get, "/connect/userinfo");
@@ -110,7 +114,52 @@ namespace AuthService.Tests.Integration.Oidc
             var userinfo = JsonDocument.Parse(await userinfoResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
             Assert.Equal(auth.UserId.ToString(), userinfo.GetProperty("sub").GetString());
             Assert.Equal(auth.Username, userinfo.GetProperty("name").GetString());
+            Assert.False(userinfo.TryGetProperty("email", out _));
+        }
+
+        [Fact]
+        public async Task AuthorizationCodeFlow_WithVerifiedEmail_EmitsEmailClaims()
+        {
+            using var client = CreateClient();
+            var (auth, email) = await RegisterUserAsync(client);
+
+            using (var scope = fixture.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AuthService.Data.AppDbContext>();
+                var userEmail = await db.UserEmails.SingleAsync(
+                    e => e.UserId == auth.UserId && e.IsPrimary, TestContext.Current.CancellationToken);
+                userEmail.VerifiedAt = DateTimeOffset.UtcNow;
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var authorizeResponse = await client.GetAsync(AuthorizeUrl, TestContext.Current.CancellationToken);
+            var code = QueryHelpers.ParseQuery(authorizeResponse.Headers.Location!.Query)["code"].ToString();
+
+            var tokenResponse = await client.PostAsync("/connect/token",
+                new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["redirect_uri"] = RedirectUri,
+                    ["client_id"] = "test-client",
+                    ["client_secret"] = "test-secret",
+                }),
+                TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
+
+            var tokens = JsonDocument.Parse(await tokenResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
+            var payload = JsonDocument.Parse(
+                Base64UrlEncoder.DecodeBytes(tokens.GetProperty("id_token").GetString()!.Split('.')[1])).RootElement;
+            Assert.Equal(email, payload.GetProperty("email").GetString());
+            Assert.True(payload.GetProperty("email_verified").GetBoolean());
+
+            var userinfoRequest = new HttpRequestMessage(HttpMethod.Get, "/connect/userinfo");
+            userinfoRequest.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer", tokens.GetProperty("access_token").GetString());
+            var userinfoResponse = await client.SendAsync(userinfoRequest, TestContext.Current.CancellationToken);
+            var userinfo = JsonDocument.Parse(await userinfoResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
             Assert.Equal(email, userinfo.GetProperty("email").GetString());
+            Assert.True(userinfo.GetProperty("email_verified").GetBoolean());
         }
 
         [Fact]

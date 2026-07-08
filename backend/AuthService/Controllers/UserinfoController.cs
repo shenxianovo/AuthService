@@ -49,11 +49,12 @@ namespace AuthService.Controllers
 
             if (User.HasScope(Scopes.Email))
             {
-                var primaryEmail = user.Emails.FirstOrDefault(e => e.IsPrimary) ?? user.Emails.FirstOrDefault();
-                if (primaryEmail is not null)
+                // Only a verified primary email is asserted (see AuthorizationController).
+                var verifiedEmail = user.Emails.FirstOrDefault(e => e.IsPrimary && e.VerifiedAt != null);
+                if (verifiedEmail is not null)
                 {
-                    claims[Claims.Email] = primaryEmail.Email;
-                    claims[Claims.EmailVerified] = primaryEmail.VerifiedAt != null;
+                    claims[Claims.Email] = verifiedEmail.Email;
+                    claims[Claims.EmailVerified] = true;
                 }
             }
 
