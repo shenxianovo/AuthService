@@ -69,6 +69,10 @@ builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(
 // OAuth Security
 builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSection(OAuthSecurityOptions.Section));
 
+// OIDC provider (OpenIddict) options + startup client seeding
+builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.Section));
+builder.Services.AddHostedService<OidcClientSeeder>();
+
 // Password hasher (uses ASP.NET Core Identity's battle-tested implementation)
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 

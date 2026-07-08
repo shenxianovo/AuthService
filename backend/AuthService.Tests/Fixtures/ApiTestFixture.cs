@@ -34,6 +34,13 @@ namespace AuthService.Tests.Fixtures
                             ["OAuthSecurity:StateExpirationSeconds"] = "600",
                             // Fixed 32-byte key so OpenIddict server startup validation passes.
                             ["Oidc:EncryptionKey"] = "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4=",
+                            // Seeded OIDC client used by the authorization code flow tests.
+                            ["Oidc:Clients:0:ClientId"] = "test-client",
+                            ["Oidc:Clients:0:ClientSecret"] = "test-secret",
+                            ["Oidc:Clients:0:DisplayName"] = "Test Client",
+                            ["Oidc:Clients:0:RedirectUris:0"] = "https://client.example.com/api/auth/sso_callback",
+                            ["Oidc:Clients:0:Scopes:0"] = "profile",
+                            ["Oidc:Clients:0:Scopes:1"] = "email",
                         });
                     });
 
