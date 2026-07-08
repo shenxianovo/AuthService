@@ -84,4 +84,15 @@ authority — the authorize endpoint re-checks `sid` revocation/expiry on every
 request (see [ADR-016](docs/adr-016-openiddict-oidc-provider.md)).
 Avoid: "SSO session" (it is not a session, just a pointer to one).
 
+### Role
+Internal authorization tier on `User` (`User` / `Admin`) that governs only
+AuthService's own admin surface (OIDC client management, future admin panel).
+It is deliberately **never emitted** in any token, OIDC claim, or userinfo
+response: admin endpoints consult the user record directly, so grants and
+revocations take effect immediately and downstream services physically cannot
+build authorization on it. Downstream permission systems (e.g. a membership
+tier in a download site) live in the downstream service's own data, keyed on
+`sub`. The bootstrap admin is designated by deployment configuration.
+Avoid: "permission", "scope" (OIDC scopes are unrelated to Role).
+
 
