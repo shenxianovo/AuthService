@@ -22,7 +22,9 @@ namespace AuthService.Tests.Fixtures
                     {
                         config.AddInMemoryCollection(new Dictionary<string, string?>
                         {
-                            ["Jwt:Issuer"] = "test-issuer",
+                            // Must be an absolute URI: OpenIddict's SetIssuer(new Uri(...)) rejects
+                            // plain strings like "test-issuer".
+                            ["Jwt:Issuer"] = "https://localhost",
                             ["Jwt:Audience"] = "test-audience",
                             ["Jwt:AccessTokenExpirationMinutes"] = "15",
                             ["Jwt:RefreshTokenExpirationDays"] = "30",
@@ -30,6 +32,8 @@ namespace AuthService.Tests.Fixtures
                             ["OAuthSecurity:AllowedRedirectOrigins:0"] = "https://example.com",
                             ["OAuthSecurity:AuthCodeExpirationSeconds"] = "60",
                             ["OAuthSecurity:StateExpirationSeconds"] = "600",
+                            // Fixed 32-byte key so OpenIddict server startup validation passes.
+                            ["Oidc:EncryptionKey"] = "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4=",
                         });
                     });
 

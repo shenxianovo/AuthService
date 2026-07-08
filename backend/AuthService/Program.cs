@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using NSwag;
 using NSwag.Generation.Processors.Security;
+using OpenIddict.Server;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,6 +114,67 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
         };
     });
 
+// OpenIddict: OIDC provider so third-party clients (e.g. OpenList) can log in
+// via the standard authorization code flow.
+builder.Services.AddOpenIddict()
+    .AddCore(options =>
+    {
+        options.UseEntityFrameworkCore()
+               .UseDbContext<AppDbContext>();
+    })
+    .AddServer(options =>
+    {
+        options.SetAuthorizationEndpointUris("connect/authorize")
+               .SetTokenEndpointUris("connect/token")
+               .SetUserInfoEndpointUris("connect/userinfo")
+               // Keep the pre-OpenIddict JWKS path so downstream services that
+               // verify our session JWTs keep working without reconfiguration.
+               .SetJsonWebKeySetEndpointUris(".well-known/jwks.json");
+
+        options.AllowAuthorizationCodeFlow()
+               .AllowRefreshTokenFlow();
+
+        options.RegisterScopes(Scopes.Profile, Scopes.Email);
+
+        // Access tokens stay plain RS256 JWTs (same key as JwtService) so
+        // existing offline verification against the JWKS is unaffected.
+        options.DisableAccessTokenEncryption();
+
+        options.UseAspNetCore()
+               .EnableAuthorizationEndpointPassthrough()
+               .EnableUserInfoEndpointPassthrough()
+               // TLS terminates at nginx; the app itself listens on plain HTTP.
+               .DisableTransportSecurityRequirement();
+    })
+    .AddValidation(options =>
+    {
+        options.UseLocalServer();
+        options.UseAspNetCore();
+    });
+
+// Issuer, signing key and encryption key are bound here (not in AddServer) so they
+// resolve through DI/IConfiguration at host build time: tests can override config
+// and swap IRsaKeyProvider, and the WebApplicationFactory config overrides apply.
+builder.Services.AddOptions<OpenIddictServerOptions>()
+    .Configure<IRsaKeyProvider, IConfiguration>((options, keyProvider, config) =>
+    {
+        options.Issuer = new Uri(config["Jwt:Issuer"]
+            ?? throw new InvalidOperationException("Jwt:Issuer is not configured."));
+
+        options.SigningCredentials.Add(new SigningCredentials(
+            new RsaSecurityKey(keyProvider.PrivateKey), SecurityAlgorithms.RsaSha256));
+
+        // Authorization codes / refresh tokens are encrypted JWTs; the key must
+        // survive restarts or all in-flight codes and refresh tokens die.
+        var encryptionKey = config["Oidc:EncryptionKey"];
+        if (string.IsNullOrEmpty(encryptionKey))
+            throw new InvalidOperationException(
+                "Oidc:EncryptionKey is not configured. Generate one with 'openssl rand -base64 32' and store it in user-secrets or the environment.");
+        options.EncryptionCredentials.Add(new EncryptingCredentials(
+            new SymmetricSecurityKey(Convert.FromBase64String(encryptionKey)),
+            SecurityAlgorithms.Aes256KW, SecurityAlgorithms.Aes256CbcHmacSha512));
+    });
+
 var app = builder.Build();
 
 // Nginx forwarded headers
@@ -140,37 +203,7 @@ app.MapHealthChecks("/health");
 
 app.MapControllers();
 
-// Minimal OIDC discovery — allows JWT Bearer middleware to auto-discover keys via Authority
-app.MapGet("/.well-known/openid-configuration", (IConfiguration config, HttpContext ctx) =>
-{
-    var baseUrl = $"{ctx.Request.Scheme}://{ctx.Request.Host}";
-    return Results.Json(new
-    {
-        issuer = config["Jwt:Issuer"],
-        jwks_uri = $"{baseUrl}/.well-known/jwks.json",
-    });
-}).AllowAnonymous();
-
-// JWKS endpoint — allows downstream services to verify JWTs offline
-app.MapGet("/.well-known/jwks.json", (IJwtService jwtService) =>
-{
-    var key = jwtService.GetPublicKey();
-    var parameters = key.Rsa!.ExportParameters(false);
-    var jwk = new
-    {
-        keys = new[]
-        {
-            new
-            {
-                kty = "RSA",
-                use = "sig",
-                alg = "RS256",
-                n = Base64UrlEncoder.Encode(parameters.Modulus!),
-                e = Base64UrlEncoder.Encode(parameters.Exponent!),
-            }
-        }
-    };
-    return Results.Json(jwk);
-}).AllowAnonymous();
+// Discovery (/.well-known/openid-configuration) and JWKS (/.well-known/jwks.json)
+// are now served by OpenIddict with the same RSA signing key JwtService uses.
 
 app.Run();
