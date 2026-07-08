@@ -50,11 +50,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { authStore } from '@/stores/auth'
 import { userStore } from '@/stores/user'
 import { useExternalRedirect } from '@/stores/externalRedirect'
+import { useOidcReturnUrl } from '@/stores/oidcReturnUrl'
 import * as api from '@/api'
 import type { AuthResponse } from '@/api'
 
 const router = useRouter()
 const { externalRedirect, clear: clearRedirect } = useExternalRedirect()
+const { returnUrl: oidcReturnUrl, consume: consumeOidcReturnUrl } = useOidcReturnUrl()
 
 const form = ref({ email: '', password: '' })
 const loading = ref(false)
@@ -84,6 +86,9 @@ async function handleLogin() {
   try {
     const data = await api.login(form.value.email, form.value.password)
     applyAuthResponse(data)
+    // OIDC flow: the login response just set the SSO cookie; resume the
+    // authorize request with a full-page navigation so the cookie is sent.
+    if (oidcReturnUrl.value) { window.location.href = consumeOidcReturnUrl()!; return }
     if (externalRedirect.value) { redirectToExternal(data); return }
     await userStore.fetch()
     router.push('/dashboard/profile')

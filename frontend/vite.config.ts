@@ -24,6 +24,15 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://localhost:5252',
           changeOrigin: true
+        },
+        // OIDC provider endpoints (OpenIddict) for local end-to-end testing
+        '/connect': {
+          target: 'http://localhost:5252',
+          changeOrigin: true
+        },
+        '/.well-known': {
+          target: 'http://localhost:5252',
+          changeOrigin: true
         }
       }
     }

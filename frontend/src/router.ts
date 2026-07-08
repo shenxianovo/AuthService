@@ -62,8 +62,11 @@ router.beforeEach((to) => {
     return { name: 'login', query: to.query }
   }
 
-  // Redirect authenticated users away from login/register
+  // Redirect authenticated users away from login/register — except during an
+  // OIDC authorize flow: the user must be able to (re)login so the SSO cookie
+  // gets issued before we send them back to /connect/authorize.
   if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
+    if (typeof to.query.returnUrl === 'string') return
     return { name: 'profile' }
   }
 })
