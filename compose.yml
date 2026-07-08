@@ -39,6 +39,9 @@ services:
       GoogleOAuth__CallbackUrl: ${GOOGLE_OAUTH_CALLBACK_URL}
       # Resend email
       Resend__ApiKey: ${RESEND_API_KEY}
+      # OIDC provider (OpenIddict)
+      Oidc__EncryptionKey: ${OIDC_ENCRYPTION_KEY}
+      Oidc__Clients__0__ClientSecret: ${OPENLIST_CLIENT_SECRET}
     secrets:
       - jwt_private
       - jwt_public
