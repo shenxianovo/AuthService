@@ -1,6 +1,6 @@
 # OIDC client management API + admin UI
 
-Status: ready-for-agent
+Status: done
 
 ## Context
 
@@ -25,3 +25,7 @@ downstream services want SSO; registering them must become a UI action.
 
 - `docs/adr-017-admin-role-and-ui-managed-oidc-clients.md`
 - `backend/AuthService/Controllers/ApiKeyController.cs` + `frontend/src/pages/dashboard/ApiKeysPage.vue` — the UX to mirror
+
+## Comments
+
+- 2026-07-08: backend API in 69e7726, frontend page in 0bc116f, suite green (213).

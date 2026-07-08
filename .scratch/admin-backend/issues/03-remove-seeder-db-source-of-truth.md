@@ -1,6 +1,6 @@
 # Delete the OIDC client seeder — database becomes source of truth
 
-Status: ready-for-agent
+Status: done
 
 ## Context
 
@@ -24,3 +24,7 @@ every boot, which would fight UI edits.
 
 - `backend/AuthService/Services/OidcClientSeeder.cs`
 - `docs/adr-017-admin-role-and-ui-managed-oidc-clients.md`
+
+## Comments
+
+- 2026-07-08: resolved, suite green (211).

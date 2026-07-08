@@ -1,6 +1,6 @@
 # Role enum + RequireAdmin policy + bootstrap admin
 
-Status: ready-for-agent
+Status: done
 
 ## Context
 
@@ -23,3 +23,7 @@ services (no claim in any token).
 
 - `docs/adr-017-admin-role-and-ui-managed-oidc-clients.md`
 - `CONTEXT.md` — Role glossary entry (authoritative semantics)
+
+## Comments
+
+- 2026-07-08: resolved in commit ae3405f, suite green (205).
