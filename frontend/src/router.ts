@@ -16,6 +16,7 @@ import EmailsPage from '@/pages/dashboard/EmailsPage.vue'
 import ProvidersPage from '@/pages/dashboard/ProvidersPage.vue'
 import ApiKeysPage from '@/pages/dashboard/ApiKeysPage.vue'
 import SecurityPage from '@/pages/dashboard/SecurityPage.vue'
+import OidcClientsPage from '@/pages/dashboard/OidcClientsPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -50,6 +51,8 @@ const router = createRouter({
         { path: 'providers', name: 'providers', component: ProvidersPage },
         { path: 'api-keys', name: 'api-keys', component: ApiKeysPage },
         { path: 'security', name: 'security', component: SecurityPage },
+        // Admin-only; visibility is a UI hint — the backend re-checks per request.
+        { path: 'oidc-clients', name: 'oidc-clients', component: OidcClientsPage },
       ],
     },
   ],

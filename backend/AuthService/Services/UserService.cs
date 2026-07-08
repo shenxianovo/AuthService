@@ -31,6 +31,7 @@ namespace AuthService.Services
             {
                 UserId = user.Id,
                 DisplayName = user.DisplayName,
+                Role = user.Role.ToString(),
                 CreatedAt = user.CreatedAt,
                 HasPassword = hasPassword,
                 Emails = user.Emails.Select(e => new EmailInfo

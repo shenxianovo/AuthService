@@ -12,12 +12,15 @@ import {
   SessionClient,
   UserClient,
   ApiKeyClient,
+  AdminClient,
   VerifyEmailRequest,
   AddEmailRequest,
   CreateApiKeyRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
+  CreateOidcClientRequest,
+  UpdateOidcClientRequest,
 } from './client'
 
 export type {
@@ -28,6 +31,9 @@ export type {
   ProblemDetails,
   CreateApiKeyResponse,
   ApiKeyListItem,
+  OidcClientSummary,
+  CreateOidcClientResponse,
+  RegenerateSecretResponse,
 } from './client'
 
 export { ApiException } from './client'
@@ -124,6 +130,7 @@ const authPasswordClient = new PasswordAuthClient(CLIENT_BASE, authHttp)
 const sessionClient = new SessionClient(CLIENT_BASE, authHttp)
 const userClient = new UserClient(CLIENT_BASE, authHttp)
 const apiKeyClient = new ApiKeyClient(CLIENT_BASE, authHttp)
+const adminClient = new AdminClient(CLIENT_BASE, authHttp)
 
 // ---------- public API ----------
 
@@ -223,4 +230,34 @@ export async function listApiKeys() {
 
 export async function revokeApiKey(id: string) {
   await apiKeyClient.revoke(id)
+}
+
+// ---------- Admin: OIDC clients ----------
+
+export async function listOidcClients() {
+  return adminClient.listOidcClients()
+}
+
+export interface OidcClientInput {
+  clientId: string
+  displayName: string
+  type: 'confidential' | 'public'
+  redirectUris: string[]
+  scopes: string[]
+}
+
+export async function createOidcClient(input: OidcClientInput) {
+  return adminClient.createOidcClient(new CreateOidcClientRequest(input))
+}
+
+export async function updateOidcClient(clientId: string, input: Omit<OidcClientInput, 'clientId' | 'type'>) {
+  return adminClient.updateOidcClient(clientId, new UpdateOidcClientRequest(input))
+}
+
+export async function regenerateOidcClientSecret(clientId: string) {
+  return adminClient.regenerateOidcClientSecret(clientId)
+}
+
+export async function deleteOidcClient(clientId: string) {
+  await adminClient.deleteOidcClient(clientId)
 }
