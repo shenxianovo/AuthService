@@ -69,3 +69,19 @@ A soft-deleted user is the result of an account merge. Global-uniqueness
 checks (e.g. username) must use `IgnoreQueryFilters()`, since the unique
 indexes still see deleted rows.
 
+### OIDC client
+A third-party application (e.g. OpenList) registered with AuthService as its
+identity provider, seeded from `Oidc:Clients` configuration and stored in the
+OpenIddict tables (see [ADR-016](docs/adr-016-openiddict-oidc-provider.md)).
+Distinct from an *auth provider*, which is an upstream login method (GitHub/
+Google) this service consumes. Avoid: "app", "relying party" in code.
+
+### Interactive cookie
+The `Interactive`-scheme cookie (`authservice.sso`, `Path=/connect`) issued
+alongside tokens when a login completes in the browser. It only identifies the
+browser to `/connect/authorize`; the session row in the database remains the
+authority — the authorize endpoint re-checks `sid` revocation/expiry on every
+request (see [ADR-016](docs/adr-016-openiddict-oidc-provider.md)).
+Avoid: "SSO session" (it is not a session, just a pointer to one).
+
+
