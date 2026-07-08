@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using AuthService.Common;
 using AuthService.DTOs.Auth;
 using AuthService.Extensions;
 using AuthService.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,6 +43,9 @@ namespace AuthService.Controllers
                 return Unauthorized();
 
             await sessionService.RevokeSessionAsync(sessionId);
+            // Clear the interactive SSO cookie too; the authorize endpoint's DB
+            // session check is the real backstop if the browser keeps a stale copy.
+            await HttpContext.SignOutAsync(AuthConstants.InteractiveScheme);
             return NoContent();
         }
     }

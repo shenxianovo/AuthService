@@ -1,5 +1,6 @@
 using AuthService.Data;
 using AuthService.Entities;
+using AuthService.Common;
 using AuthService.Configuration;
 using AuthService.Middleware;
 using AuthService.Services;
@@ -98,7 +99,23 @@ builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer();
+    .AddJwtBearer()
+    // Interactive cookie: lets /connect/authorize recognize the browser session.
+    // The SPA keeps using bearer tokens; this cookie only travels to /connect/*.
+    .AddCookie(AuthConstants.InteractiveScheme, options =>
+    {
+        options.Cookie.Name = "authservice.sso";
+        options.Cookie.HttpOnly = true;
+        // Cross-site top-level GET from the OIDC client must carry the cookie → Lax, not Strict.
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        // TLS terminates at nginx (forwarded proto); plain http stays usable in dev.
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.Path = "/connect";
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = false;
+        options.LoginPath = "/login";
+        options.ReturnUrlParameter = "returnUrl";
+    });
 builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
     .Configure<IJwtService, IConfiguration>((options, jwtService, config) =>
     {

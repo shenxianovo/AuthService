@@ -14,7 +14,8 @@ namespace AuthService.Controllers
         IPasswordAuthService passwordAuthService,
         IPasswordResetService passwordResetService,
         IEmailVerificationService emailVerificationService,
-        IEmailManagementService emailManagementService) : ControllerBase
+        IEmailManagementService emailManagementService,
+        IJwtService jwtService) : ControllerBase
     {
         [HttpPost("register")]
         [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
@@ -23,7 +24,11 @@ namespace AuthService.Controllers
         {
             var (ipAddress, device) = this.GetClientContext();
             var result = await passwordAuthService.RegisterAsync(request, ipAddress, device);
-            return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result.Error);
+
+            await this.SignInInteractiveAsync(result.Value, jwtService);
+            return Ok(result.Value);
         }
 
         [HttpPost("login")]
@@ -33,7 +38,11 @@ namespace AuthService.Controllers
         {
             var (ipAddress, device) = this.GetClientContext();
             var result = await passwordAuthService.LoginAsync(request, ipAddress, device);
-            return result.IsSuccess ? Ok(result.Value) : this.ToErrorResponse(result.Error);
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result.Error);
+
+            await this.SignInInteractiveAsync(result.Value, jwtService);
+            return Ok(result.Value);
         }
 
         /// <summary>
