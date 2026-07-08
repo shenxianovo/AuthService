@@ -41,10 +41,12 @@ rather than hand-rolling the protocol or deploying a separate IdP (Keycloak).
   `/login?returnUrl=<authorize URL>`; the SPA resumes the flow with a full-page
   navigation after login. Only same-origin `/connect/authorize` return URLs are
   honored.
-- **Clients** are seeded idempotently at startup from `Oidc:Clients`
-  (confidential, implicit consent — first-party self-hosted apps get no consent
-  screen). Redirect URIs are exact-match including query strings (OpenList
-  calls back with `?method=...` variants).
+- **Clients** live in the OpenIddict tables and are managed through the admin
+  UI/API (superseded here by [ADR-017](adr-017-admin-role-and-ui-managed-oidc-clients.md);
+  originally they were seeded from an `Oidc:Clients` config section). All
+  clients are confidential-or-public with implicit consent — first-party
+  self-hosted apps get no consent screen. Redirect URIs are exact-match
+  including query strings (OpenList calls back with `?method=...` variants).
 - **Claims**: the username is emitted as both `name` and `preferred_username`
   in the id_token so either OpenList "username key" setting works; email
   claims travel only in id_token/userinfo under the `email` scope, and **only
@@ -84,8 +86,8 @@ rather than hand-rolling the protocol or deploying a separate IdP (Keycloak).
 | OpenList setting | Value |
 |---|---|
 | SSO login platform | `OIDC` |
-| SSO client ID | `openlist` (from `Oidc:Clients`) |
-| SSO client secret | the `OPENLIST_CLIENT_SECRET` value from `.env` |
+| SSO client ID | the client id you register in the admin UI (e.g. `openlist`) |
+| SSO client secret | shown once when creating the client in the admin UI |
 | SSO endpoint name | the exact `issuer` from `/.well-known/openid-configuration` (e.g. `https://auth.shenxianovo.com/`) |
 | OIDC username key | `name` (or `preferred_username`) |
 | SSO extra scopes | `profile email` |
@@ -93,4 +95,4 @@ rather than hand-rolling the protocol or deploying a separate IdP (Keycloak).
 | SSO compatibility mode | off |
 
 The OpenList callback URL must be listed (with its `?method=...` variants) in
-`Oidc:Clients:0:RedirectUris` in `appsettings.json`.
+the client's redirect URIs in the admin UI.

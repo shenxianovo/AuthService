@@ -17,9 +17,10 @@ services:
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=authservice;Username=authservice;Password=localdev"
       Jwt__Issuer: http://localhost:8080
       Jwt__Audience: http://localhost:8080
-      # Dev-only values — never reuse in production.
+      # Dev-only values — never reuse in production. OIDC clients are created
+      # through the admin UI (bootstrap admin: register "localadmin", restart).
       Oidc__EncryptionKey: "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4="
-      Oidc__Clients__0__ClientSecret: local-dev-secret
+      Admin__BootstrapUsername: localadmin
 
   frontend:
     image: authservice-frontend:local

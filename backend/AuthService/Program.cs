@@ -69,9 +69,9 @@ builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(
 // OAuth Security
 builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSection(OAuthSecurityOptions.Section));
 
-// OIDC provider (OpenIddict) options + startup client seeding
+// OIDC provider (OpenIddict) options. Clients live in the database and are
+// managed via the admin UI/API (ADR-017) — no config seeding.
 builder.Services.Configure<OidcOptions>(builder.Configuration.GetSection(OidcOptions.Section));
-builder.Services.AddHostedService<OidcClientSeeder>();
 
 // Admin surface: DB-checked policy (Role never rides in a token, see ADR-017)
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection(AdminOptions.Section));

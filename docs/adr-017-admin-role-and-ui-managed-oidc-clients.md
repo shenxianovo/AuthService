@@ -1,10 +1,11 @@
 # ADR-017: Admin Role and UI-Managed OIDC Clients
 
-## Status: Proposed
+## Status: Accepted
 
 ## Date: 2026-07-08
 
-(Not yet implemented — this records the design agreed for the upcoming admin backend feature.)
+(Implemented across `ae3405f` (role + policy), `69e7726`/`0bc116f` (client
+management API + UI), and the seeder-removal commit.)
 
 ## Context
 
@@ -48,5 +49,7 @@ database on every boot, so UI edits and config would fight).
 
 ## References
 
-- [`OidcClientSeeder.cs`](../backend/AuthService/Services/OidcClientSeeder.cs) — to be deleted by this ADR
-- [`ApiKeyController.cs`](../backend/AuthService/Controllers/ApiKeyController.cs) — the secret-shown-once UX to mirror
+- [`OidcClientAdminService.cs`](../backend/AuthService/Services/OidcClientAdminService.cs) — admin CRUD over the OpenIddict store
+- [`OidcClientDescriptors.cs`](../backend/AuthService/Services/OidcClientDescriptors.cs) — shared descriptor rules (permissions, PKCE)
+- [`AdminAuthorization.cs`](../backend/AuthService/Services/AdminAuthorization.cs) — DB-checked RequireAdmin policy
+- [`ApiKeyController.cs`](../backend/AuthService/Controllers/ApiKeyController.cs) — the secret-shown-once UX this mirrors

@@ -39,9 +39,8 @@ services:
       GoogleOAuth__CallbackUrl: ${GOOGLE_OAUTH_CALLBACK_URL}
       # Resend email
       Resend__ApiKey: ${RESEND_API_KEY}
-      # OIDC provider (OpenIddict)
+      # OIDC provider (OpenIddict) — clients are managed in the admin UI
       Oidc__EncryptionKey: ${OIDC_ENCRYPTION_KEY}
-      Oidc__Clients__0__ClientSecret: ${OPENLIST_CLIENT_SECRET}
       # Bootstrap admin (promoted idempotently at startup)
       Admin__BootstrapUsername: ${ADMIN_BOOTSTRAP_USERNAME}
     secrets:

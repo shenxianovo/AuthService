@@ -7,10 +7,10 @@ using Microsoft.Extensions.Options;
 namespace AuthService.Services
 {
     /// <summary>
-    /// Promotes the configured bootstrap user to Admin at startup (idempotent,
-    /// same pattern as OidcClientSeeder). If the user doesn't exist yet, logs a
-    /// warning and does nothing — the promotion happens on the next restart
-    /// after registration, or an existing admin can promote via the API.
+    /// Promotes the configured bootstrap user to Admin at startup (idempotent).
+    /// If the user doesn't exist yet, logs a warning and does nothing — the
+    /// promotion happens on the next restart after registration, or an existing
+    /// admin can promote via the API.
     /// </summary>
     public sealed class AdminBootstrapper(
         IServiceProvider serviceProvider,

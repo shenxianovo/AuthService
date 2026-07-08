@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenIddict.Abstractions;
 
 namespace AuthService.Tests.Fixtures
 {
@@ -35,19 +36,6 @@ namespace AuthService.Tests.Fixtures
                             ["OAuthSecurity:StateExpirationSeconds"] = "600",
                             // Fixed 32-byte key so OpenIddict server startup validation passes.
                             ["Oidc:EncryptionKey"] = "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4=",
-                            // Seeded OIDC client used by the authorization code flow tests.
-                            ["Oidc:Clients:0:ClientId"] = "test-client",
-                            ["Oidc:Clients:0:ClientSecret"] = "test-secret",
-                            ["Oidc:Clients:0:DisplayName"] = "Test Client",
-                            ["Oidc:Clients:0:RedirectUris:0"] = "https://client.example.com/api/auth/sso_callback",
-                            ["Oidc:Clients:0:Scopes:0"] = "profile",
-                            ["Oidc:Clients:0:Scopes:1"] = "email",
-                            // Public (SPA) client: no secret, PKCE enforced per client.
-                            ["Oidc:Clients:1:ClientId"] = "test-spa",
-                            ["Oidc:Clients:1:DisplayName"] = "Test SPA",
-                            ["Oidc:Clients:1:Type"] = "public",
-                            ["Oidc:Clients:1:RedirectUris:0"] = "https://spa.example.com/callback",
-                            ["Oidc:Clients:1:Scopes:0"] = "profile",
                         });
                     });
 
@@ -96,7 +84,17 @@ namespace AuthService.Tests.Fixtures
                 AllowAutoRedirect = false // important for OAuth redirect tests
             });
 
-            await Task.CompletedTask;
+            // Register the OIDC clients the flow tests use. Clients live in the
+            // database (managed via the admin API in production, ADR-017), so the
+            // fixture registers them directly against the store.
+            using var scope = Factory.Services.CreateScope();
+            var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+            await manager.CreateAsync(OidcClientDescriptors.Build(
+                "test-client", "test-secret", "Test Client", isPublic: false,
+                ["https://client.example.com/api/auth/sso_callback"], ["profile", "email"]));
+            await manager.CreateAsync(OidcClientDescriptors.Build(
+                "test-spa", null, "Test SPA", isPublic: true,
+                ["https://spa.example.com/callback"], ["profile"]));
         }
 
         /// <summary>
