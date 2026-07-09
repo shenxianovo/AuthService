@@ -1,75 +1,54 @@
+using System.Net.Http.Headers;
 using AuthService.Common;
-using AuthService.Configuration;
 using AuthService.DTOs.Auth;
+using AuthService.DTOs.Auth.Github;
+using AuthService.Entities;
 using AuthService.Extensions;
 using AuthService.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Options;
+using OpenIddict.Abstractions;
+using OpenIddict.Client.AspNetCore;
+using static OpenIddict.Abstractions.OpenIddictConstants;
+using static OpenIddict.Client.WebIntegration.OpenIddictClientWebIntegrationConstants;
 
 namespace AuthService.Controllers
 {
+    /// <summary>
+    /// Upstream GitHub/Google login via OpenIddict Client (ADR-018). The client
+    /// stack owns state protection, correlation and code exchange; these actions
+    /// only translate between it and the domain pipeline
+    /// (ProcessOAuthLoginAsync → session → one-time auth code → SPA).
+    /// </summary>
     [ApiController]
     [Route("api/v1/auth")]
-    [Produces("application/json")]
     public class OAuthController(
-        IGithubAuthService githubAuthService,
-        IGoogleAuthService googleAuthService,
+        IOAuthService oauthService,
+        ISessionService sessionService,
         IOAuthSecurityService oauthSecurity,
         IJwtService jwtService,
-        IOptions<GithubOAuthOptions> githubOptions,
-        IOptions<GoogleOAuthOptions> googleOptions) : ControllerBase
+        IHttpClientFactory httpClientFactory) : ControllerBase
     {
-        private readonly GithubOAuthOptions _githubOptions = githubOptions.Value;
-        private readonly GoogleOAuthOptions _googleOptions = googleOptions.Value;
+        private const string RedirectUrlKey = "redirectUrl";
+        private const string BindUserIdKey = "bindUserId";
 
-        // ===================== GitHub OAuth =====================
+        // ===================== Login entry points =====================
 
         [HttpGet("github/login")]
         public IActionResult GithubLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
-            => StartOAuthLogin(redirectUrl, token, state =>
-                "https://github.com/login/oauth/authorize" +
-                $"?client_id={_githubOptions.ClientId}" +
-                $"&redirect_uri={Uri.EscapeDataString(_githubOptions.CallbackUrl)}" +
-                "&scope=user:email" +
-                $"&state={Uri.EscapeDataString(state)}");
-
-        [HttpGet("github/callback")]
-        public async Task<IActionResult> GithubCallback([FromQuery] string code, [FromQuery] string? state)
-        {
-            return await HandleOAuthCallback(
-                state,
-                (ipAddress, device, currentUserId) => githubAuthService.LoginAsync(code, ipAddress, device, currentUserId));
-        }
-
-        // ===================== Google OAuth =====================
+            => StartOAuthLogin(Providers.GitHub, redirectUrl, token);
 
         [HttpGet("google/login")]
         public IActionResult GoogleLogin([FromQuery] string? redirectUrl, [FromQuery] string? token)
-            => StartOAuthLogin(redirectUrl, token, state =>
-                "https://accounts.google.com/o/oauth2/v2/auth" +
-                $"?client_id={_googleOptions.ClientId}" +
-                $"&redirect_uri={Uri.EscapeDataString(_googleOptions.CallbackUrl)}" +
-                "&response_type=code" +
-                "&scope=openid%20email%20profile" +
-                $"&state={Uri.EscapeDataString(state)}");
-
-        [HttpGet("google/callback")]
-        public async Task<IActionResult> GoogleCallback([FromQuery] string code, [FromQuery] string? state)
-        {
-            return await HandleOAuthCallback(
-                state,
-                (ipAddress, device, currentUserId) => googleAuthService.LoginAsync(code, ipAddress, device, currentUserId));
-        }
-
-        // ===================== Helpers =====================
+            => StartOAuthLogin(Providers.Google, redirectUrl, token);
 
         /// <summary>
-        /// Shared login entry: validate the redirect URL, resolve an optional binding
-        /// userId from the JWT query param, mint signed state, and redirect to the
-        /// provider's authorize URL (built by <paramref name="buildAuthorizeUrl"/>).
+        /// Validate the redirect URL, resolve an optional binding userId from the
+        /// JWT query param, and challenge the OpenIddict client scheme. The
+        /// properties round-trip inside the protected OAuth state parameter.
         /// </summary>
-        private IActionResult StartOAuthLogin(string? redirectUrl, string? token, Func<string, string> buildAuthorizeUrl)
+        private IActionResult StartOAuthLogin(string provider, string? redirectUrl, string? token)
         {
             var redirectValidation = oauthSecurity.ValidateRedirectUrl(redirectUrl);
             if (!redirectValidation.IsSuccess)
@@ -79,41 +58,123 @@ namespace AuthService.Controllers
             if (!string.IsNullOrEmpty(token))
                 userId = jwtService.ValidateTokenAndGetUserId(token);
 
-            var state = oauthSecurity.GenerateState(redirectUrl, userId);
-            return Redirect(buildAuthorizeUrl(state));
+            var properties = new AuthenticationProperties
+            {
+                Items =
+                {
+                    [OpenIddictClientAspNetCoreConstants.Properties.ProviderName] = provider,
+                    [RedirectUrlKey] = redirectUrl,
+                    [BindUserIdKey] = userId?.ToString(),
+                },
+            };
+
+            return Challenge(properties, OpenIddictClientAspNetCoreDefaults.AuthenticationScheme);
         }
 
-        /// <summary>
-        /// Unified OAuth callback handler. Validates signed state, performs login,
-        /// generates a one-time auth code, and redirects with code (not token).
-        /// </summary>
-        private async Task<IActionResult> HandleOAuthCallback(
-            string? state,
-            Func<string, string, Guid?, Task<Result<AuthResponse>>> loginAction)
-        {
-            // Validate signed state
-            OAuthStatePayload? statePayload = null;
-            if (!string.IsNullOrEmpty(state))
-            {
-                statePayload = oauthSecurity.ValidateState(state);
-                if (statePayload == null)
-                    return this.ToErrorResponse(AuthError.InvalidOAuthState);
-            }
+        // ===================== Provider callbacks =====================
 
-            string? redirectUrl = statePayload?.RedirectUrl;
-            Guid? currentUserId = statePayload?.UserId;
+        [HttpGet("github/callback"), HttpPost("github/callback")]
+        public async Task<IActionResult> GithubCallback()
+        {
+            var result = await HttpContext.AuthenticateAsync(OpenIddictClientAspNetCoreDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+                return this.ToErrorResponse(AuthError.InvalidOAuthState);
+
+            var principal = result.Principal;
+            var providerUserId = principal.FindFirst(Claims.Subject)?.Value
+                ?? principal.FindFirst("id")?.Value;
+            if (providerUserId is null)
+                return this.ToErrorResponse(AuthError.InvalidOAuthState);
+
+            var login = principal.FindFirst("login")?.Value;
+
+            // GET /user only carries the public profile email with no verification
+            // status. The primary, verified address lives in /user/emails, which
+            // is the authoritative source for both (ADR-012).
+            var providerToken = result.Properties?.GetTokenValue(
+                OpenIddictClientAspNetCoreConstants.Tokens.BackchannelAccessToken);
+            var (email, emailVerified) = await FetchGithubPrimaryEmailAsync(providerToken);
+            email ??= principal.FindFirst(Claims.Email)?.Value;
+
+            return await CompleteAsync(
+                AuthProviderType.Github,
+                providerUserId,
+                email,
+                displayName: login ?? principal.FindFirst(Claims.Name)?.Value ?? providerUserId,
+                providerLogin: login,
+                emailVerified,
+                result.Properties);
+        }
+
+        [HttpGet("google/callback"), HttpPost("google/callback")]
+        public async Task<IActionResult> GoogleCallback()
+        {
+            var result = await HttpContext.AuthenticateAsync(OpenIddictClientAspNetCoreDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+                return this.ToErrorResponse(AuthError.InvalidOAuthState);
+
+            // Google is a full OIDC provider: sub/name/email/email_verified come
+            // from the validated id_token + userinfo, no extra calls needed.
+            var principal = result.Principal;
+            var providerUserId = principal.FindFirst(Claims.Subject)?.Value;
+            if (providerUserId is null)
+                return this.ToErrorResponse(AuthError.InvalidOAuthState);
+
+            var email = principal.FindFirst(Claims.Email)?.Value;
+            var emailVerified = string.Equals(
+                principal.FindFirst(Claims.EmailVerified)?.Value, "true", StringComparison.OrdinalIgnoreCase);
+
+            return await CompleteAsync(
+                AuthProviderType.Google,
+                providerUserId,
+                email,
+                displayName: principal.FindFirst(Claims.Name)?.Value ?? email ?? providerUserId,
+                providerLogin: null,
+                emailVerified,
+                result.Properties);
+        }
+
+        // ===================== Shared completion =====================
+
+        /// <summary>
+        /// Unchanged domain pipeline: upsert/link/merge the account, create a
+        /// session, then hand off to the SPA with a one-time auth code (tokens
+        /// never appear in URLs).
+        /// </summary>
+        private async Task<IActionResult> CompleteAsync(
+            AuthProviderType provider,
+            string providerUserId,
+            string? email,
+            string displayName,
+            string? providerLogin,
+            bool emailVerified,
+            AuthenticationProperties? properties)
+        {
+            string? redirectUrl = null;
+            Guid? bindUserId = null;
+            if (properties is not null)
+            {
+                properties.Items.TryGetValue(RedirectUrlKey, out redirectUrl);
+                if (properties.Items.TryGetValue(BindUserIdKey, out var rawUserId)
+                    && Guid.TryParse(rawUserId, out var parsed))
+                    bindUserId = parsed;
+            }
 
             var (ipAddress, device) = this.GetClientContext();
 
-            var result = await loginAction(ipAddress, device, currentUserId);
+            var userResult = await oauthService.ProcessOAuthLoginAsync(
+                provider, providerUserId, email, displayName, bindUserId, providerLogin, emailVerified);
+
+            var result = userResult.IsSuccess
+                ? await sessionService.CreateSessionAsync(userResult.Value, ipAddress, device)
+                : Result<AuthResponse>.Fail(userResult.Error, userResult.ErrorMessage);
 
             if (!result.IsSuccess)
             {
                 if (!string.IsNullOrEmpty(redirectUrl))
                 {
                     var errorMsg = result.ErrorMessage ?? result.Error.ToString();
-                    var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "error", errorMsg);
-                    return Redirect(finalUrl);
+                    return Redirect(QueryHelpers.AddQueryString(redirectUrl, "error", errorMsg));
                 }
                 return this.ToErrorResponse(result.Error, result.ErrorMessage);
             }
@@ -123,13 +184,29 @@ namespace AuthService.Controllers
                 var authCode = oauthSecurity.GenerateAuthCode(
                     result.Value.UserId, result.Value.AccessToken,
                     result.Value.RefreshToken, result.Value.ExpiresAt);
-
-                var finalUrl = QueryHelpers.AddQueryString(redirectUrl, "code", authCode);
-                return Redirect(finalUrl);
+                return Redirect(QueryHelpers.AddQueryString(redirectUrl, "code", authCode));
             }
 
             return Ok(result.Value);
         }
 
+        private async Task<(string? Email, bool Verified)> FetchGithubPrimaryEmailAsync(string? accessToken)
+        {
+            if (string.IsNullOrEmpty(accessToken))
+                return (null, false);
+
+            var http = httpClientFactory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("AuthService", "1.0"));
+
+            using var response = await http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+                return (null, false);
+
+            var emails = await response.Content.ReadFromJsonAsync<List<GithubEmail>>();
+            var primary = emails?.FirstOrDefault(e => e.Primary);
+            return (primary?.Email, primary?.Verified ?? false);
+        }
     }
 }

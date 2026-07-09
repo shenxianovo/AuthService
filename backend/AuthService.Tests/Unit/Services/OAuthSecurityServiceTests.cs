@@ -1,7 +1,6 @@
 using AuthService.Common;
 using AuthService.Configuration;
 using AuthService.Services;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
@@ -14,7 +13,6 @@ namespace AuthService.Tests.Unit.Services
 
         public OAuthSecurityServiceTests()
         {
-            var dataProtectionProvider = DataProtectionProvider.Create("TestApp");
             _cache = new MemoryCache(new MemoryCacheOptions());
 
             var options = Options.Create(new OAuthSecurityOptions
@@ -26,91 +24,12 @@ namespace AuthService.Tests.Unit.Services
                     "http://localhost:3000",
                 ],
                 AuthCodeExpirationSeconds = 60,
-                StateExpirationSeconds = 600,
             });
 
-            _sut = new OAuthSecurityService(dataProtectionProvider, _cache, options);
+            _sut = new OAuthSecurityService(_cache, options);
         }
 
         public void Dispose() => _cache.Dispose();
-
-        // ===================== State Generation & Validation =====================
-
-        [Fact]
-        public void GenerateState_ReturnsNonEmptyString()
-        {
-            var state = _sut.GenerateState("https://example.com/callback", null);
-
-            Assert.NotNull(state);
-            Assert.NotEmpty(state);
-        }
-
-        [Fact]
-        public void ValidateState_WithValidState_ReturnsPayload()
-        {
-            var redirectUrl = "https://example.com/callback";
-            var userId = Guid.NewGuid();
-            var state = _sut.GenerateState(redirectUrl, userId);
-
-            var payload = _sut.ValidateState(state);
-
-            Assert.NotNull(payload);
-            Assert.Equal(redirectUrl, payload.RedirectUrl);
-            Assert.Equal(userId, payload.UserId);
-            Assert.NotEmpty(payload.Nonce);
-        }
-
-        [Fact]
-        public void ValidateState_WithNullRedirectAndUser_ReturnsPayloadWithNulls()
-        {
-            var state = _sut.GenerateState(null, null);
-
-            var payload = _sut.ValidateState(state);
-
-            Assert.NotNull(payload);
-            Assert.Null(payload.RedirectUrl);
-            Assert.Null(payload.UserId);
-        }
-
-        [Fact]
-        public void ValidateState_WithTamperedState_ReturnsNull()
-        {
-            var state = _sut.GenerateState("https://example.com", null);
-            var tampered = state + "tampered";
-
-            var payload = _sut.ValidateState(tampered);
-
-            Assert.Null(payload);
-        }
-
-        [Fact]
-        public void ValidateState_WithGarbageString_ReturnsNull()
-        {
-            var payload = _sut.ValidateState("totally-not-a-valid-state");
-
-            Assert.Null(payload);
-        }
-
-        [Fact]
-        public void ValidateState_WithExpiredState_ReturnsNull()
-        {
-            // Create a service with very short state expiration (1 second)
-            var shortLivedOptions = Options.Create(new OAuthSecurityOptions
-            {
-                StateExpirationSeconds = 1,
-            });
-            var shortLivedService = new OAuthSecurityService(
-                DataProtectionProvider.Create("TestApp"), _cache, shortLivedOptions);
-
-            var state = shortLivedService.GenerateState("https://example.com", null);
-
-            // Wait long enough to ensure the 1-second expiration has passed
-            // (using 2100ms to account for second-level timestamp truncation)
-            Thread.Sleep(2100);
-            var payload = shortLivedService.ValidateState(state);
-
-            Assert.Null(payload);
-        }
 
         // ===================== Redirect URL Validation =====================
 
@@ -239,8 +158,7 @@ namespace AuthService.Tests.Unit.Services
             {
                 AuthCodeExpirationSeconds = 1,
             });
-            var shortLivedService = new OAuthSecurityService(
-                DataProtectionProvider.Create("TestApp"), shortCache, shortLivedOptions);
+            var shortLivedService = new OAuthSecurityService(shortCache, shortLivedOptions);
 
             var code = shortLivedService.GenerateAuthCode(Guid.NewGuid(), "access", "refresh", DateTimeOffset.UtcNow.AddMinutes(15));
 

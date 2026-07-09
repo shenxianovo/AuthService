@@ -12,8 +12,10 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using NSwag;
 using NSwag.Generation.Processors.Security;
+using OpenIddict.Client;
 using OpenIddict.Server;
 using static OpenIddict.Abstractions.OpenIddictConstants;
+using static OpenIddict.Client.WebIntegration.OpenIddictClientWebIntegrationConstants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -97,8 +99,7 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
 builder.Services.AddSingleton<IOAuthSecurityService, OAuthSecurityService>();
-builder.Services.AddHttpClient<IGithubAuthService, GithubAuthService>();
-builder.Services.AddHttpClient<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddHttpClient();
 
 // Resend Email
 builder.Services.Configure<ResendOptions>(builder.Configuration.GetSection("Resend"));
@@ -185,6 +186,38 @@ builder.Services.AddOpenIddict()
     {
         options.UseLocalServer();
         options.UseAspNetCore();
+    })
+    // Upstream GitHub/Google login (ADR-018). Same vendor as the server side:
+    // one options style, one key story. Registrations are declared here with
+    // placeholder credentials; the real values bind deferred (below) so test
+    // hosts can override configuration — same reason as the server options.
+    .AddClient(options =>
+    {
+        options.AllowAuthorizationCodeFlow();
+
+        // Where the client stack listens for provider callbacks — same paths the
+        // GitHub/Google OAuth apps have always had registered.
+        options.SetRedirectionEndpointUris(
+            "api/v1/auth/github/callback",
+            "api/v1/auth/google/callback");
+
+        options.UseAspNetCore()
+               .EnableRedirectionEndpointPassthrough()
+               .DisableTransportSecurityRequirement();
+
+        options.UseSystemNetHttp();
+
+        options.UseWebProviders()
+               .AddGitHub(o => o
+                   .SetClientId("placeholder")
+                   .SetClientSecret("placeholder")
+                   .SetRedirectUri("api/v1/auth/github/callback")
+                   .AddScopes("user:email"))
+               .AddGoogle(o => o
+                   .SetClientId("placeholder")
+                   .SetClientSecret("placeholder")
+                   .SetRedirectUri("api/v1/auth/google/callback")
+                   .AddScopes("openid", "profile", "email"));
     });
 
 // Issuer, signing key and encryption key are bound here (not in AddServer) so they
@@ -208,6 +241,49 @@ builder.Services.AddOptions<OpenIddictServerOptions>()
         options.EncryptionCredentials.Add(new EncryptingCredentials(
             new SymmetricSecurityKey(Convert.FromBase64String(encryptionKey)),
             SecurityAlgorithms.Aes256KW, SecurityAlgorithms.Aes256CbcHmacSha512));
+    });
+
+// The client stack protects its own state tokens; reuse the same keys as the
+// server (deferred binding for the same test-swap reasons as above).
+builder.Services.AddOptions<OpenIddictClientOptions>()
+    .Configure<IRsaKeyProvider, IConfiguration>((options, keyProvider, config) =>
+    {
+        options.SigningCredentials.Add(new SigningCredentials(
+            new RsaSecurityKey(keyProvider.PrivateKey), SecurityAlgorithms.RsaSha256));
+
+        var encryptionKey = config["Oidc:EncryptionKey"];
+        if (string.IsNullOrEmpty(encryptionKey))
+            throw new InvalidOperationException(
+                "Oidc:EncryptionKey is not configured. Generate one with 'openssl rand -base64 32' and store it in user-secrets or the environment.");
+        options.EncryptionCredentials.Add(new EncryptingCredentials(
+            new SymmetricSecurityKey(Convert.FromBase64String(encryptionKey)),
+            SecurityAlgorithms.Aes256KW, SecurityAlgorithms.Aes256CbcHmacSha512));
+    })
+    // Provider credentials: configured values replace the placeholders, and
+    // unconfigured providers are dropped so credential-less dev stacks still
+    // boot. PostConfigure because the WebIntegration providers materialize
+    // their registrations after the Configure stage.
+    .PostConfigure<IConfiguration>((options, config) =>
+    {
+        BindProviderCredentials(options, Providers.GitHub, config.GetSection(GithubOAuthOptions.Section));
+        BindProviderCredentials(options, Providers.Google, config.GetSection(GoogleOAuthOptions.Section));
+
+        static void BindProviderCredentials(OpenIddictClientOptions options, string provider, IConfigurationSection section)
+        {
+            var registration = options.Registrations.FirstOrDefault(r => r.ProviderName == provider);
+            if (registration is null)
+                return;
+
+            var clientId = section["ClientId"];
+            if (string.IsNullOrEmpty(clientId))
+            {
+                options.Registrations.Remove(registration);
+                return;
+            }
+
+            registration.ClientId = clientId;
+            registration.ClientSecret = section["ClientSecret"];
+        }
     });
 
 var app = builder.Build();

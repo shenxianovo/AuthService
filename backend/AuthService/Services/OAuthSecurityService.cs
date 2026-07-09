@@ -1,71 +1,22 @@
 using AuthService.Common;
 using AuthService.Configuration;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace AuthService.Services
 {
     public interface IOAuthSecurityService
     {
-        string GenerateState(string? redirectUrl, Guid? userId);
-        OAuthStatePayload? ValidateState(string protectedState);
         Result ValidateRedirectUrl(string? redirectUrl);
         string GenerateAuthCode(Guid userId, string accessToken, string refreshToken, DateTimeOffset expiresAt);
         Result<AuthCodePayload> ExchangeAuthCode(string code);
     }
 
     public class OAuthSecurityService(
-        IDataProtectionProvider dataProtection,
         IMemoryCache cache,
         IOptions<OAuthSecurityOptions> options) : IOAuthSecurityService
     {
-        private readonly IDataProtector _protector = dataProtection.CreateProtector("OAuthState");
         private readonly OAuthSecurityOptions _options = options.Value;
-
-        /// <summary>
-        /// Generate a signed, tamper-proof state parameter for OAuth flows.
-        /// Includes a CSRF nonce and optional redirect URL / user ID.
-        /// </summary>
-        public string GenerateState(string? redirectUrl, Guid? userId)
-        {
-            var payload = new OAuthStatePayload
-            {
-                RedirectUrl = redirectUrl,
-                UserId = userId,
-                Nonce = Guid.NewGuid().ToString("N"),
-                ExpiresAtUnix = DateTimeOffset.UtcNow.AddSeconds(_options.StateExpirationSeconds).ToUnixTimeSeconds()
-            };
-
-            var json = JsonSerializer.Serialize(payload);
-            return _protector.Protect(json);
-        }
-
-        /// <summary>
-        /// Validate and deserialize the OAuth state. Returns null if invalid, expired, or tampered.
-        /// </summary>
-        public OAuthStatePayload? ValidateState(string protectedState)
-        {
-            try
-            {
-                var json = _protector.Unprotect(protectedState);
-                var payload = JsonSerializer.Deserialize<OAuthStatePayload>(json);
-
-                if (payload == null)
-                    return null;
-
-                // Check expiration
-                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > payload.ExpiresAtUnix)
-                    return null;
-
-                return payload;
-            }
-            catch
-            {
-                return null;
-            }
-        }
 
         /// <summary>
         /// Validate that the redirect URL is in the allowed list.

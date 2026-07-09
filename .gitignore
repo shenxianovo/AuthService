@@ -634,3 +634,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local dev JWT keys - never commit
+backend/AuthService/Keys/

@@ -40,7 +40,7 @@ access token (a signed JWT, never stored server-side).
 
 ### Binding flow
 An OAuth callback made while the user is already authenticated (a `currentUserId`
-is present, carried in the signed OAuth state). The intent is to attach a new
+is present, carried in the protected OAuth state). The intent is to attach a new
 provider to the current account rather than log in — and it may trigger an account
 merge if the provider or email already belongs to another user.
 Avoid: "connect", "link account" as the formal term.
@@ -71,8 +71,10 @@ indexes still see deleted rows.
 
 ### OIDC client
 A third-party application (e.g. OpenList) registered with AuthService as its
-identity provider, seeded from `Oidc:Clients` configuration and stored in the
-OpenIddict tables (see [ADR-016](docs/adr-016-openiddict-oidc-provider.md)).
+identity provider. Clients live in the OpenIddict tables and are managed
+through the admin UI — the database is the sole source of truth (see
+[ADR-016](docs/adr-016-openiddict-oidc-provider.md),
+[ADR-017](docs/adr-017-admin-role-and-ui-managed-oidc-clients.md)).
 Distinct from an *auth provider*, which is an upstream login method (GitHub/
 Google) this service consumes. Avoid: "app", "relying party" in code.
 

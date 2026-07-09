@@ -1,6 +1,10 @@
 # ADR-005: OAuth State Signing + Redirect Whitelist
 
-## Status: Accepted
+## Status: Partially superseded by [ADR-018](adr-018-aspnet-oauth-handlers.md)
+
+State signing is now handled by ASP.NET remote authentication handlers
+(`AuthenticationProperties` protected into the `state` parameter); the
+redirect whitelist survives, tightened to the SPA's own origin.
 
 ## Date: 2026-03-20
 

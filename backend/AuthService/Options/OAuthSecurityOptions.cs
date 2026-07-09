@@ -15,19 +15,6 @@ namespace AuthService.Configuration
         /// How long the one-time authorization code is valid (seconds). Default: 60.
         /// </summary>
         public int AuthCodeExpirationSeconds { get; set; } = 60;
-
-        /// <summary>
-        /// How long the OAuth state is valid (seconds). Default: 600.
-        /// </summary>
-        public int StateExpirationSeconds { get; set; } = 600;
-    }
-
-    public class OAuthStatePayload
-    {
-        public string? RedirectUrl { get; set; }
-        public Guid? UserId { get; set; }
-        public string Nonce { get; set; } = null!;
-        public long ExpiresAtUnix { get; set; }
     }
 
     public class AuthCodePayload

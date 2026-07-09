@@ -36,6 +36,12 @@ namespace AuthService.Tests.Fixtures
                             ["OAuthSecurity:StateExpirationSeconds"] = "600",
                             // Fixed 32-byte key so OpenIddict server startup validation passes.
                             ["Oidc:EncryptionKey"] = "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4=",
+                            // Dummy upstream provider credentials so the OpenIddict client
+                            // registrations exist and challenge redirects can be asserted.
+                            ["GithubOAuth:ClientId"] = "test-github-client",
+                            ["GithubOAuth:ClientSecret"] = "test-github-secret",
+                            ["GoogleOAuth:ClientId"] = "test-google-client",
+                            ["GoogleOAuth:ClientSecret"] = "test-google-secret",
                         });
                     });
 
