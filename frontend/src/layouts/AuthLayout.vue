@@ -5,8 +5,8 @@
     >
       <div class="text-center px-8 pt-8">
         <h1 class="text-2xl font-bold text-foreground">AuthService</h1>
-        <p v-if="externalRedirect" class="mt-2 text-sm text-muted-foreground">
-          Sign in to continue to <strong class="text-foreground">{{ externalRedirectHost }}</strong>
+        <p v-if="clientId" class="mt-2 text-sm text-muted-foreground">
+          Sign in to continue to <strong class="text-foreground">{{ clientId }}</strong>
         </p>
         <p v-else class="mt-2 text-sm text-muted-foreground">Sign in to your account</p>
       </div>
@@ -18,13 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useExternalRedirect } from '@/stores/externalRedirect'
+import { useOidcReturnUrl } from '@/stores/oidcReturnUrl'
 
-const { externalRedirect } = useExternalRedirect()
-
-const externalRedirectHost = computed(() => {
-  try { return externalRedirect.value ? new URL(externalRedirect.value).host : '' }
-  catch { return externalRedirect.value ?? '' }
-})
+const { clientId } = useOidcReturnUrl()
 </script>

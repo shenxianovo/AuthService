@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const returnUrl = ref<string | null>(null)
 
@@ -39,5 +39,15 @@ export function useOidcReturnUrl() {
     return url
   }
 
-  return { returnUrl, init, consume }
+  /** client_id of the pending authorize request — shown as "continue to X". */
+  const clientId = computed(() => {
+    if (!returnUrl.value) return null
+    try {
+      return new URLSearchParams(returnUrl.value.split('?')[1] ?? '').get('client_id')
+    } catch {
+      return null
+    }
+  })
+
+  return { returnUrl, clientId, init, consume }
 }

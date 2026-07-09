@@ -21,6 +21,8 @@ services:
       # through the admin UI (bootstrap admin: register "localadmin", restart).
       Oidc__EncryptionKey: "3q2+7wEjRRSKPfXpVGVRVKgXltV7Kbk9sMkY1u8F0z4="
       Admin__BootstrapUsername: localadmin
+      # SPA's own OAuth round-trip callback (the only redirectUrl consumer)
+      OAuthSecurity__AllowedRedirectOrigins__0: http://localhost:8080
 
   frontend:
     image: authservice-frontend:local

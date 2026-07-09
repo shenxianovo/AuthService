@@ -45,12 +45,10 @@ import RegisterForm from '@/components/RegisterForm.vue'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { authStore } from '@/stores/auth'
-import { useExternalRedirect } from '@/stores/externalRedirect'
 import * as api from '@/api'
 import type { AuthResponse } from '@/api'
 
 const router = useRouter()
-const { externalRedirect } = useExternalRedirect()
 
 const form = ref({ displayName: '', email: '', password: '' })
 const loading = ref(false)
@@ -83,12 +81,10 @@ async function handleRegister() {
 const currentPageUrl = () => window.location.origin + '/callback'
 
 function handleGithubLogin() {
-  if (externalRedirect.value) sessionStorage.setItem('externalRedirect', externalRedirect.value)
   window.location.href = api.githubLoginUrl(currentPageUrl())
 }
 
 function handleGoogleLogin() {
-  if (externalRedirect.value) sessionStorage.setItem('externalRedirect', externalRedirect.value)
   window.location.href = api.googleLoginUrl(currentPageUrl())
 }
 </script>
