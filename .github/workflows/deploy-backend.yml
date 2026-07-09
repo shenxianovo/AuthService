@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'compose.yml'
   workflow_dispatch:
 
 env:
@@ -52,6 +53,19 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: deploy-backend-production
     steps:
+      - uses: actions/checkout@v4
+
+      # The server's compose.yml is CI-managed: new env mappings/services in the
+      # repo's compose.yml must reach the server before `up` recreates containers.
+      - name: Sync compose.yml
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: compose.yml
+          target: /srv/AuthService
+
       - name: Pull and restart backend container
         uses: appleboy/ssh-action@v1
         with:
