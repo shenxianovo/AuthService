@@ -31,7 +31,7 @@ namespace AuthService.Tests.Unit.Services
 
             var sessionService = new SessionService(Db, jwtServiceMock.Object, jwtOptions);
             var passwordHasher = new PasswordHasher<User>();
-            _sut = new PasswordAuthService(Db, new AccountService(Db), sessionService, passwordHasher);
+            _sut = new PasswordAuthService(Db, new AccountService(Db, new RecordingGrantRevoker()), sessionService, passwordHasher);
         }
 
         [Fact]

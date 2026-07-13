@@ -6,7 +6,7 @@ namespace AuthService.Services
     /// <summary>
     /// Account composition write authority. Owns all operations that create, merge,
     /// or modify the set of data that constitutes a user account: emails, providers,
-    /// password, sessions, API keys.
+    /// password, sessions, API keys, OIDC grants.
     ///
     /// Write methods do NOT call SaveChangesAsync — callers commit once at the end
     /// to ensure the entire operation (e.g. OAuth login + merge) is atomic.
@@ -65,7 +65,8 @@ namespace AuthService.Services
         /// Merge all data from sourceUserId into targetUserId, then soft-delete the source.
         /// Migrates: AuthProviders, UserEmails (reassigned; global email uniqueness means
         /// no overlap is possible), Sessions, ApiKeys, PasswordCredential.
-        /// Revokes source's active sessions.
+        /// Revokes source's active sessions and OIDC grants (the latter commit
+        /// immediately via the OpenIddict managers, outside the caller's unit of work).
         /// </summary>
         Task MergeAsync(Guid sourceUserId, Guid targetUserId);
 

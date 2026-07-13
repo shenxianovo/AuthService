@@ -128,7 +128,8 @@ namespace AuthService.Tests.Integration
             var sourceSessionIds = await Db.Sessions
                 .Where(s => s.UserId == source.Id).Select(s => s.Id).ToListAsync(ct);
 
-            await new AccountService(Db).MergeAsync(source.Id, target.Id);
+            var grantRevoker = new RecordingGrantRevoker();
+            await new AccountService(Db, grantRevoker).MergeAsync(source.Id, target.Id);
             await Db.SaveChangesAsync(ct);
 
             foreach (var (type, spec) in Manifest)
@@ -155,6 +156,12 @@ namespace AuthService.Tests.Integration
 
             var sourceAfter = await Db.Users.IgnoreQueryFilters().SingleAsync(u => u.Id == source.Id, ct);
             Assert.True(sourceAfter.IsDeleted);
+
+            // OIDC grants are part of the account composition but live in the
+            // OpenIddict tables (no FK to User, so the manifest can't see them):
+            // pin the revocation call here, end-to-end coverage in GrantLifecycleTests.
+            Assert.Contains(source.Id, grantRevoker.RevokedUserIds);
+            Assert.DoesNotContain(target.Id, grantRevoker.RevokedUserIds);
         }
 
         [Fact]
@@ -168,7 +175,7 @@ namespace AuthService.Tests.Integration
             Db.AuthProviders.Add(new AuthProvider { UserId = source.Id, Provider = AuthProviderType.Github, ProviderUserId = "gh-1" });
             await Db.SaveChangesAsync(ct);
 
-            var sut = new AccountService(Db);
+            var sut = new AccountService(Db, new RecordingGrantRevoker());
             await sut.MergeAsync(source.Id, target.Id);
             await Db.SaveChangesAsync(ct);
 

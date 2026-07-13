@@ -25,7 +25,7 @@ namespace AuthService.Tests.Unit.Services
                 SessionExpirationDays = 30,
             });
             _sessionService = new SessionService(Db, Mock.Of<IJwtService>(), jwtOptions);
-            _sut = new PasswordAuthService(Db, new AccountService(Db), _sessionService, _hasher);
+            _sut = new PasswordAuthService(Db, new AccountService(Db, new RecordingGrantRevoker()), _sessionService, _hasher);
         }
 
         private async Task<User> CreateUserAsync(bool hasPassword = true)

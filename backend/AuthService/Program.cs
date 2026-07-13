@@ -98,6 +98,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
 builder.Services.AddScoped<IPasswordAuthService, PasswordAuthService>();
+builder.Services.AddScoped<IOidcGrantRevoker, OidcGrantRevoker>();
 builder.Services.AddSingleton<IOAuthSecurityService, OAuthSecurityService>();
 builder.Services.AddHttpClient();
 
@@ -178,6 +179,7 @@ builder.Services.AddOpenIddict()
 
         options.UseAspNetCore()
                .EnableAuthorizationEndpointPassthrough()
+               .EnableTokenEndpointPassthrough()
                .EnableUserInfoEndpointPassthrough()
                // TLS terminates at nginx; the app itself listens on plain HTTP.
                .DisableTransportSecurityRequirement();

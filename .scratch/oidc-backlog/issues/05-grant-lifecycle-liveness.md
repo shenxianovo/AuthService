@@ -1,6 +1,6 @@
 # OIDC grant lifecycle: liveness check on refresh + revoke on delete/merge
 
-Status: ready-for-agent
+Status: done
 
 ## Context
 
@@ -41,3 +41,10 @@ Today neither half is enforced:
 - A token revocation endpoint (`SetRevocationEndpointUris`) is a natural
   companion but not required by this issue; fold it into the end-session work
   (issue 03) if OpenList ever needs it.
+
+## Comments
+
+- 2026-07-13: resolved — token endpoint passthrough with liveness check
+  (`AuthorizationController.Exchange`), `OidcGrantRevoker` called from
+  `AccountService.MergeAsync`, three lifecycle integration tests
+  (`GrantLifecycleTests`) plus the merge-guard pin. Suite green (211).

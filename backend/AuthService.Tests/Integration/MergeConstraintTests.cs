@@ -14,7 +14,7 @@ namespace AuthService.Tests.Integration
     /// </summary>
     public class MergeConstraintTests(PostgresContainerFixture fixture) : PostgresTestBase(fixture)
     {
-        private AccountService Sut => new(Db);
+        private AccountService Sut => new(Db, new RecordingGrantRevoker());
 
         [Fact]
         public async Task Merge_MigratesApiKeys_WithoutViolatingConstraints()

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Services
 {
-    public class AccountService(AppDbContext db) : IAccountService
+    public class AccountService(AppDbContext db, IOidcGrantRevoker grantRevoker) : IAccountService
     {
         public async Task<User> CreateFromOAuthAsync(
             AuthProviderType provider,
@@ -247,6 +247,13 @@ namespace AuthService.Services
             // Soft-delete source user
             sourceUser.IsDeleted = true;
             sourceUser.UpdatedAt = DateTimeOffset.UtcNow;
+
+            // OIDC grants die with the account, never with a session (ADR-020
+            // mental model): the merged-away sub must not keep refreshing tokens
+            // at downstream clients. The OpenIddict managers commit immediately
+            // (outside this unit of work) — if the merge itself fails to commit,
+            // grants were over-revoked, which is the safe direction.
+            await grantRevoker.RevokeAllForUserAsync(sourceUserId);
         }
 
         public async Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider)

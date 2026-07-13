@@ -77,6 +77,50 @@ namespace AuthService.Controllers
         }
 
         /// <summary>
+        /// OIDC token endpoint (passthrough). OpenIddict has already validated the
+        /// client and the code/refresh token; this action only enforces account
+        /// liveness before re-issuing. Grants deliberately outlive sessions —
+        /// logout must not end downstream logins (ADR-020 mental model) — but not
+        /// the account: a soft-deleted/merged user must not refresh.
+        /// </summary>
+        [HttpPost("~/connect/token")]
+        [IgnoreAntiforgeryToken]
+        [Produces("application/json")]
+        public async Task<IActionResult> Exchange()
+        {
+            var request = HttpContext.GetOpenIddictServerRequest()
+                ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+            if (!request.IsAuthorizationCodeGrantType() && !request.IsRefreshTokenGrantType())
+                throw new InvalidOperationException("The specified grant type is not supported.");
+
+            // The principal stored inside the authorization code / refresh token.
+            var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            if (!result.Succeeded
+                || !Guid.TryParse(result.Principal?.GetClaim(Claims.Subject), out var userId))
+            {
+                return ForbidInvalidGrant("The token is no longer valid.");
+            }
+
+            // The soft-delete query filter hides dead users, so existence == liveness.
+            if (!await db.Users.AnyAsync(u => u.Id == userId))
+                return ForbidInvalidGrant("The user account is no longer available.");
+
+            // Claims, scopes and destinations round-trip inside the code/refresh
+            // token; re-signing in the stored principal re-issues them unchanged.
+            return SignIn(result.Principal!, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
+        private IActionResult ForbidInvalidGrant(string description)
+            => Forbid(
+                new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = description,
+                }),
+                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+        /// <summary>
         /// 302 to the SPA login page with returnUrl pointing back at this authorize
         /// request, so the flow resumes after the user signs in.
         /// </summary>

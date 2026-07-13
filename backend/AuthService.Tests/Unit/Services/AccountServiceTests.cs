@@ -16,7 +16,7 @@ namespace AuthService.Tests.Unit.Services
 
         public AccountServiceTests()
         {
-            _sut = new AccountService(Db);
+            _sut = new AccountService(Db, new RecordingGrantRevoker());
         }
 
         // ==================== CreateFromOAuth ====================

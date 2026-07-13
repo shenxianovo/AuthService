@@ -11,7 +11,7 @@ namespace AuthService.Tests.Fixtures
     /// </summary>
     public sealed class RecordingAccountService(AppDbContext db) : IAccountService
     {
-        private readonly AccountService _inner = new(db);
+        private readonly AccountService _inner = new(db, new RecordingGrantRevoker());
 
         public List<string> Calls { get; } = [];
         public (Guid Source, Guid Target)? LastMerge { get; private set; }

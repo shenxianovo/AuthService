@@ -36,7 +36,7 @@ namespace AuthService.Tests.Unit.Services
 
             _sut = new PasswordResetService(
                 Db,
-                new AccountService(Db),
+                new AccountService(Db, new RecordingGrantRevoker()),
                 _sessionService,
                 _emailMock.Object,
                 _hasher,
