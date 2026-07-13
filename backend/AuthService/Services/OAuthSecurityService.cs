@@ -19,7 +19,9 @@ namespace AuthService.Services
         private readonly OAuthSecurityOptions _options = options.Value;
 
         /// <summary>
-        /// Validate that the redirect URL is in the allowed list.
+        /// Validate that the redirect URL's origin exactly matches an allowed origin.
+        /// Wildcards were retired with the ?redirect= era (issue 06, 2026-07-13);
+        /// startup validation rejects any configured origin containing '*'.
         /// Returns Result.Fail(InvalidRedirectUrl) if not allowed; Result.Ok() otherwise.
         /// </summary>
         public Result ValidateRedirectUrl(string? redirectUrl)
@@ -33,38 +35,11 @@ namespace AuthService.Services
             if (uri.Scheme != "https" && uri.Scheme != "http")
                 return Result.Fail(AuthError.InvalidRedirectUrl, "Invalid redirect URL scheme.");
 
-            var host = uri.Host;
             var origin = $"{uri.Scheme}://{uri.Authority}";
-
-            foreach (var allowed in _options.AllowedRedirectOrigins)
-            {
-                var trimmed = allowed.TrimEnd('/');
-
-                // Wildcard subdomain matching: "https://*.example.com"
-                if (trimmed.Contains("*.", StringComparison.Ordinal))
-                {
-                    // Parse the pattern to extract scheme and wildcard domain
-                    if (Uri.TryCreate(trimmed.Replace("*.", "placeholder."), UriKind.Absolute, out var patternUri))
-                    {
-                        if (!string.Equals(uri.Scheme, patternUri.Scheme, StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        var baseDomain = patternUri.Host.Replace("placeholder.", "", StringComparison.Ordinal);
-
-                        // Match the base domain itself or any subdomain
-                        if (string.Equals(host, baseDomain, StringComparison.OrdinalIgnoreCase) ||
-                            host.EndsWith($".{baseDomain}", StringComparison.OrdinalIgnoreCase))
-                            return Result.Ok();
-                    }
-                    continue;
-                }
-
-                // Exact origin match
-                if (string.Equals(origin, trimmed, StringComparison.OrdinalIgnoreCase))
-                    return Result.Ok();
-            }
-
-            return Result.Fail(AuthError.InvalidRedirectUrl, "Redirect URL is not allowed.");
+            return _options.AllowedRedirectOrigins.Any(allowed =>
+                string.Equals(origin, allowed.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+                ? Result.Ok()
+                : Result.Fail(AuthError.InvalidRedirectUrl, "Redirect URL is not allowed.");
         }
 
         /// <summary>

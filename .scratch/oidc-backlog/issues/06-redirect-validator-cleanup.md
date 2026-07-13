@@ -1,6 +1,6 @@
 # Redirect validator cleanup: drop wildcard matching, error codes only
 
-Status: ready-for-agent
+Status: done
 
 ## Context
 
@@ -31,3 +31,11 @@ era, no historical baggage. Two leftovers in the SPA OAuth round-trip:
 - `backend/AuthService/Controllers/OAuthController.cs`
 - `.scratch/oidc-backlog/issues/04-retire-redirect-handoff.md` — the removal
   this is the residue of
+
+## Comments
+
+- 2026-07-13: resolved. Validator is exact-origin only; wildcard config
+  fails at startup via options ValidateOnStart; login error redirects carry
+  the AuthError enum name only (bind branch already did). Unit tests
+  inverted (subdomain/port now rejected) + startup validation test.
+  Suite green (218).

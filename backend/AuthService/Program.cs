@@ -68,8 +68,14 @@ builder.Services.Configure<GithubOAuthOptions>(builder.Configuration.GetSection(
 // Google OAuth
 builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection(GoogleOAuthOptions.Section));
 
-// OAuth Security
-builder.Services.Configure<OAuthSecurityOptions>(builder.Configuration.GetSection(OAuthSecurityOptions.Section));
+// OAuth Security. No wildcard origins: the ?redirect= era is over (2026-07-13),
+// and a stray config line must not silently reopen the subdomain redirect surface.
+builder.Services.AddOptions<OAuthSecurityOptions>()
+    .Bind(builder.Configuration.GetSection(OAuthSecurityOptions.Section))
+    .Validate(
+        o => !o.AllowedRedirectOrigins.Any(origin => origin.Contains('*')),
+        "OAuthSecurity:AllowedRedirectOrigins must be exact origins — wildcards are not supported.")
+    .ValidateOnStart();
 
 // OIDC provider (OpenIddict) options. Clients live in the database and are
 // managed via the admin UI/API (ADR-017) — no config seeding.

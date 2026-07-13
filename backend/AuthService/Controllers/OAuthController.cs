@@ -251,11 +251,9 @@ namespace AuthService.Controllers
 
             if (!result.IsSuccess)
             {
+                // Error codes only — internal messages don't belong in URLs.
                 if (!string.IsNullOrEmpty(redirectUrl))
-                {
-                    var errorMsg = result.ErrorMessage ?? result.Error.ToString();
-                    return Redirect(QueryHelpers.AddQueryString(redirectUrl, "error", errorMsg));
-                }
+                    return Redirect(QueryHelpers.AddQueryString(redirectUrl, "error", result.Error.ToString()));
                 return this.ToErrorResponse(result.Error, result.ErrorMessage);
             }
 

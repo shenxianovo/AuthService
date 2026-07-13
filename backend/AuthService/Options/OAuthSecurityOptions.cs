@@ -5,9 +5,9 @@ namespace AuthService.Configuration
         public const string Section = "OAuthSecurity";
 
         /// <summary>
-        /// Allowed redirect URL origins. Supports wildcard subdomains with "*." prefix.
-        /// e.g. "https://*.shenxianovo.com" allows all subdomains of shenxianovo.com.
-        /// e.g. "https://example.com" allows exact match only.
+        /// Allowed redirect URL origins, exact match only (e.g. "https://example.com").
+        /// The only legitimate consumer is the SPA's own OAuth round-trip (ADR-018);
+        /// wildcards were retired with the ?redirect= era and are rejected at startup.
         /// </summary>
         public List<string> AllowedRedirectOrigins { get; set; } = [];
 

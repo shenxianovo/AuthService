@@ -20,7 +20,6 @@ namespace AuthService.Tests.Unit.Services
                 AllowedRedirectOrigins =
                 [
                     "https://example.com",
-                    "https://*.shenxianovo.com",
                     "http://localhost:3000",
                 ],
                 AuthCodeExpirationSeconds = 60,
@@ -55,17 +54,20 @@ namespace AuthService.Tests.Unit.Services
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithAllowedWildcardSubdomain_ReturnsSuccess()
+        public void ValidateRedirectUrl_WithSubdomainOfAllowedOrigin_ReturnsFailure()
         {
-            var result = _sut.ValidateRedirectUrl("https://app.shenxianovo.com/callback");
-            Assert.True(result.IsSuccess);
+            // Wildcards died with the ?redirect= era: origins match exactly.
+            var result = _sut.ValidateRedirectUrl("https://app.example.com/callback");
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRedirectUrl, result.Error);
         }
 
         [Fact]
-        public void ValidateRedirectUrl_WithAllowedBaseDomainOfWildcard_ReturnsSuccess()
+        public void ValidateRedirectUrl_WithDifferentPort_ReturnsFailure()
         {
-            var result = _sut.ValidateRedirectUrl("https://shenxianovo.com/callback");
-            Assert.True(result.IsSuccess);
+            var result = _sut.ValidateRedirectUrl("http://localhost:4000/auth/callback");
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.InvalidRedirectUrl, result.Error);
         }
 
         [Fact]
