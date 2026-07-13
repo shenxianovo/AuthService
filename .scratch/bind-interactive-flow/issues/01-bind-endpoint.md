@@ -1,6 +1,6 @@
 # Bind endpoint: POST /connect/bind/{provider} (interactive cookie auth)
 
-Status: ready-for-agent
+Status: done
 
 ## Context
 
@@ -41,3 +41,16 @@ token in the URL (history, proxy logs) and contradicts ADR-018's invariant.
 - `backend/AuthService/Controllers/OAuthController.cs`
 - `backend/AuthService/Controllers/AuthorizationController.cs` — liveness-check pattern to reuse
 - `frontend/src/api/index.ts` — token-appending branch to delete
+
+## Comments
+
+- 2026-07-13: resolved. `POST /connect/bind/{provider}` with interactive
+  cookie + DB liveness; `?token=` param and its JWT resolution deleted; bind
+  completion mints no session/auth code and 302s with `?bound=`/`?error=`
+  (error enum codes only). Frontend `startBind` form-POST; ProvidersPage
+  consumes the result query. Six BindFlowTests cover challenge/liveness/405/
+  redirect-gate/404; the provider round-trip halves follow the
+  OAuthChallengeTests precedent (attach/merge covered at OAuthService level).
+  Note: cookie challenge is an explicit `/login?returnUrl=` redirect —
+  under `[ApiController]` a bare Challenge resolves to the bearer scheme.
+  Suite green (217) + frontend typecheck clean.

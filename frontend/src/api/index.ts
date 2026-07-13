@@ -194,12 +194,23 @@ export function googleLoginUrl(redirectUrl: string): string {
   return `${API_BASE}/google/login?redirectUrl=${encodeURIComponent(redirectUrl)}`
 }
 
-export function githubBindUrl(redirectUrl: string, accessToken: string): string {
-  return `${API_BASE}/github/login?redirectUrl=${encodeURIComponent(redirectUrl)}&token=${encodeURIComponent(accessToken)}`
-}
-
-export function googleBindUrl(redirectUrl: string, accessToken: string): string {
-  return `${API_BASE}/google/login?redirectUrl=${encodeURIComponent(redirectUrl)}&token=${encodeURIComponent(accessToken)}`
+/**
+ * Start a provider bind (ADR-019): a top-level form POST to the interactive
+ * bind endpoint. Identity comes from the interactive cookie — no token in the
+ * URL. POST is mandatory: SameSite=Lax withholds the cookie on cross-site
+ * POSTs, which is what makes this CSRF-safe.
+ */
+export function startBind(provider: 'github' | 'google', redirectUrl: string): void {
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = `/connect/bind/${provider}`
+  const input = document.createElement('input')
+  input.type = 'hidden'
+  input.name = 'redirectUrl'
+  input.value = redirectUrl
+  form.appendChild(input)
+  document.body.appendChild(form)
+  form.submit()
 }
 
 export async function unlinkProvider(provider: string): Promise<void> {

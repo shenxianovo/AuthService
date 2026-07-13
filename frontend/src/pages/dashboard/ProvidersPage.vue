@@ -59,7 +59,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/PageHeader.vue'
 import Toast from '@/components/Toast.vue'
-import { authStore } from '@/stores/auth'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
 
@@ -98,16 +97,27 @@ async function handleUnlink(provider: string) {
 }
 
 function handleGithubBind() {
-  const t = authStore.state.tokens?.accessToken ?? ''
-  window.location.href = api.githubBindUrl(window.location.origin + '/callback', t)
+  api.startBind('github', window.location.origin + window.location.pathname)
 }
 
 function handleGoogleBind() {
-  const t = authStore.state.tokens?.accessToken ?? ''
-  window.location.href = api.googleBindUrl(window.location.origin + '/callback', t)
+  api.startBind('google', window.location.origin + window.location.pathname)
+}
+
+/** The bind endpoint 302s back with ?bound=<provider> or ?error=<code>. */
+function consumeBindResult() {
+  const params = new URLSearchParams(window.location.search)
+  const bound = params.get('bound')
+  const bindError = params.get('error')
+  if (!bound && !bindError) return
+
+  if (bound) success.value = `${bound} account linked`
+  if (bindError) error.value = `Failed to link account (${bindError})`
+  window.history.replaceState(null, '', window.location.pathname)
 }
 
 onMounted(() => {
-  if (!userStore.userInfo.value) userStore.fetch()
+  consumeBindResult()
+  userStore.fetch()
 })
 </script>
