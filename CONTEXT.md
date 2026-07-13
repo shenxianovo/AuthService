@@ -9,7 +9,8 @@ synonyms.
 
 ### Account composition
 The full set of data that constitutes a user: the `User` row plus its emails,
-auth providers, password credential, sessions, and API keys. `AccountService` is
+auth providers, password credential, sessions, API keys, and OIDC grants
+(OpenIddict authorization/token rows keyed on `sub`). `AccountService` is
 the single write authority over this set (see [ADR-010](docs/adr-010-account-composition-service.md)).
 Avoid: "user data", "profile" (too vague).
 
@@ -36,12 +37,26 @@ Avoid: "login", "token" (a session is neither).
 A long-lived credential bound to a session, exchanged for a new access token. Each
 use rotates it: the old token is revoked and a new one issued (see
 [ADR-007](docs/adr-007-refresh-token-rotation.md)). Distinct from the short-lived
-access token (a signed JWT, never stored server-side).
+access token (a signed JWT, never stored server-side). Not to be confused with
+the *OIDC refresh token* an OIDC client receives from `/connect/token` — that
+one belongs to a grant, not a session, and dying sessions don't kill it.
+
+### Grant
+A user's standing delegation to an OIDC client: the OpenIddict authorization
+plus its tokens, keyed on `sub`. Owns the OIDC refresh tokens issued to that
+client. Its lifecycle is deliberately independent of any session — logging out
+of AuthService does not log the user out of downstream clients (the Google
+model). It dies only when revoked explicitly or when the user is soft-deleted/
+merged (decided 2026-07-09). Avoid: "connection", "authorization" (ambiguous
+with the endpoint).
 
 ### Binding flow
-An OAuth callback made while the user is already authenticated (a `currentUserId`
-is present, carried in the protected OAuth state). The intent is to attach a new
-provider to the current account rather than log in — and it may trigger an account
+An interactive browser flow that attaches a new auth provider to the current
+account: a top-level **POST** to `/connect/bind/{provider}`, authenticated by
+the interactive cookie (with the same DB session-liveness check as authorize),
+then the provider round-trip with `currentUserId` carried in the protected
+OAuth state (see [ADR-019](docs/adr-019-bind-as-interactive-flow.md)). Not a
+login: completing a bind never mints a new session. It may trigger an account
 merge if the provider or email already belongs to another user.
 Avoid: "connect", "link account" as the formal term.
 
@@ -81,9 +96,11 @@ Google) this service consumes. Avoid: "app", "relying party" in code.
 ### Interactive cookie
 The `Interactive`-scheme cookie (`authservice.sso`, `Path=/connect`) issued
 alongside tokens when a login completes in the browser. It only identifies the
-browser to `/connect/authorize`; the session row in the database remains the
-authority — the authorize endpoint re-checks `sid` revocation/expiry on every
-request (see [ADR-016](docs/adr-016-openiddict-oidc-provider.md)).
+browser to the interactive endpoints under `/connect` — `/connect/authorize`
+and `/connect/bind/{provider}`; the session row in the database remains the
+authority — those endpoints re-check `sid` revocation/expiry on every request
+(see [ADR-016](docs/adr-016-openiddict-oidc-provider.md),
+[ADR-019](docs/adr-019-bind-as-interactive-flow.md)).
 Avoid: "SSO session" (it is not a session, just a pointer to one).
 
 ### Role

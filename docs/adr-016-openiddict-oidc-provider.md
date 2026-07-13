@@ -61,8 +61,12 @@ rather than hand-rolling the protocol or deploying a separate IdP (Keycloak).
   the first seeded client.
 - ✅ Existing surfaces are untouched: GitHub/Google upstream login, API-key
   exchange, session JWTs and their downstream verification all work as before.
-- ✅ Session revocation propagates to SSO instantly via the authorize-time DB
-  check.
+- ✅ Session revocation propagates to **new authorize requests** instantly via
+  the authorize-time DB check. Already-issued RP credentials live on the
+  grant's own lifecycle instead: access tokens until expiry, refresh tokens
+  until the grant is revoked — by design, logout does not end downstream
+  logins, but soft-delete/merge must (decided 2026-07-09, see
+  `.scratch/oidc-backlog/issues/05-grant-lifecycle-liveness.md`).
 - ⚠️ Two secrets to manage per deployment: `Oidc:EncryptionKey` (must never
   rotate casually) and one client secret per registered app.
 - ⚠️ OpenIddict-issued tokens carry the issuer with a trailing slash

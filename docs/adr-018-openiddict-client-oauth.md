@@ -2,6 +2,10 @@
 
 ## Status: Accepted
 
+Amended by [ADR-019](adr-019-bind-as-interactive-flow.md) (2026-07-13): the
+bind-`userId`-from-`?token=` mechanism in decision 2 is superseded by the
+interactive bind flow (`POST /connect/bind/{provider}`).
+
 ## Date: 2026-07-09
 
 ## Context
