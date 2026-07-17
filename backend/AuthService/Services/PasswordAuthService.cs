@@ -32,19 +32,14 @@ namespace AuthService.Services
         {
             var username = request.Username.ToLowerInvariant();
 
-            if (!UsernameValidator.IsValid(username))
-                return Result<AuthResponse>.Fail(AuthError.InvalidUsername);
-
             var emailExists = await db.UserEmails
                 .AnyAsync(e => e.Email == request.Email.ToLowerInvariant());
             if (emailExists)
                 return Result<AuthResponse>.Fail(AuthError.EmailAlreadyExists);
 
-            // Username uniqueness is global — soft-deleted users still hold their
-            // username under the unique index, so bypass the soft-delete filter.
-            var usernameExists = await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Username == username);
-            if (usernameExists)
-                return Result<AuthResponse>.Fail(AuthError.UsernameAlreadyExists);
+            var availability = await account.CheckUsernameAvailableAsync(username);
+            if (!availability.IsSuccess)
+                return Result<AuthResponse>.Fail(availability.Error);
 
             var passwordHash = passwordHasher.HashPassword(null!, request.Password);
             var user = await account.CreateFromPasswordAsync(username, request.Email, request.DisplayName, passwordHash);

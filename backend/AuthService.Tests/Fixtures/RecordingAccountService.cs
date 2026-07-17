@@ -61,5 +61,17 @@ namespace AuthService.Tests.Fixtures
             Calls.Add(nameof(UnlinkProviderAsync));
             return _inner.UnlinkProviderAsync(userId, provider);
         }
+
+        public Task<Result> CheckUsernameAvailableAsync(string username)
+        {
+            Calls.Add(nameof(CheckUsernameAvailableAsync));
+            return _inner.CheckUsernameAvailableAsync(username);
+        }
+
+        public Task<Result<bool>> ChangeUsernameAsync(Guid userId, string newUsername)
+        {
+            Calls.Add(nameof(ChangeUsernameAsync));
+            return _inner.ChangeUsernameAsync(userId, newUsername);
+        }
     }
 }

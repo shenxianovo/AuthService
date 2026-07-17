@@ -256,6 +256,38 @@ namespace AuthService.Services
             await grantRevoker.RevokeAllForUserAsync(sourceUserId);
         }
 
+        public async Task<Result> CheckUsernameAvailableAsync(string username)
+        {
+            var normalized = username.ToLowerInvariant();
+
+            if (!UsernameValidator.IsValid(normalized))
+                return Result.Fail(AuthError.InvalidUsername);
+
+            // Uniqueness is global — soft-deleted users still hold their username
+            // under the unique index, so bypass the soft-delete filter.
+            var exists = await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Username == normalized);
+            return exists ? Result.Fail(AuthError.UsernameAlreadyExists) : Result.Ok();
+        }
+
+        public async Task<Result<bool>> ChangeUsernameAsync(Guid userId, string newUsername)
+        {
+            var user = await db.Users.FindAsync(userId);
+            if (user is null)
+                return Result<bool>.Fail(AuthError.UserNotFound);
+
+            var normalized = newUsername.ToLowerInvariant();
+            if (user.Username == normalized)
+                return Result<bool>.Ok(false);
+
+            var availability = await CheckUsernameAvailableAsync(normalized);
+            if (!availability.IsSuccess)
+                return Result<bool>.Fail(availability.Error, availability.ErrorMessage);
+
+            user.Username = normalized;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+            return Result<bool>.Ok(true);
+        }
+
         public async Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider)
         {
             var authProvider = await db.AuthProviders

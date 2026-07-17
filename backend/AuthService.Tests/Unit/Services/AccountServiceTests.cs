@@ -241,5 +241,85 @@ namespace AuthService.Tests.Unit.Services
             Assert.False(result.IsSuccess);
             Assert.Equal(AuthError.ProviderNotLinked, result.Error);
         }
+
+        // ==================== ChangeUsername ====================
+
+        [Fact]
+        public async Task ChangeUsername_ToAvailableName_SetsIt_AndReportsChanged()
+        {
+            var user = new User { Username = "alice", DisplayName = "Alice" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.ChangeUsernameAsync(user.Id, "alice2");
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            Assert.True(result.IsSuccess);
+            Assert.True(result.Value);
+            var reloaded = await Db.Users.FindAsync([user.Id], TestContext.Current.CancellationToken);
+            Assert.Equal("alice2", reloaded!.Username);
+        }
+
+        [Fact]
+        public async Task ChangeUsername_UppercaseInput_IsNormalizedToLowercase()
+        {
+            var user = new User { Username = "alice", DisplayName = "Alice" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.ChangeUsernameAsync(user.Id, "AliceNew");
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            Assert.True(result.IsSuccess);
+            var reloaded = await Db.Users.FindAsync([user.Id], TestContext.Current.CancellationToken);
+            Assert.Equal("alicenew", reloaded!.Username);
+        }
+
+        [Fact]
+        public async Task ChangeUsername_SameName_IsNoOp_AndReportsUnchanged()
+        {
+            var user = new User { Username = "alice", DisplayName = "Alice" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.ChangeUsernameAsync(user.Id, "alice");
+
+            Assert.True(result.IsSuccess);
+            Assert.False(result.Value);
+        }
+
+        [Fact]
+        public async Task ChangeUsername_ToTakenName_ReturnsUsernameAlreadyExists()
+        {
+            Db.Users.Add(new User { Username = "taken", DisplayName = "Other" });
+            var user = new User { Username = "alice", DisplayName = "Alice" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            var result = await _sut.ChangeUsernameAsync(user.Id, "taken");
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.UsernameAlreadyExists, result.Error);
+        }
+
+        [Fact]
+        public async Task ChangeUsername_ToReservedOrMalformedName_ReturnsInvalidUsername()
+        {
+            var user = new User { Username = "alice", DisplayName = "Alice" };
+            Db.Users.Add(user);
+            await Db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            Assert.Equal(AuthError.InvalidUsername, (await _sut.ChangeUsernameAsync(user.Id, "admin")).Error);
+            Assert.Equal(AuthError.InvalidUsername, (await _sut.ChangeUsernameAsync(user.Id, "-bad-")).Error);
+        }
+
+        [Fact]
+        public async Task ChangeUsername_NonExistentUser_ReturnsUserNotFound()
+        {
+            var result = await _sut.ChangeUsernameAsync(Guid.NewGuid(), "whoever");
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(AuthError.UserNotFound, result.Error);
+        }
     }
 }

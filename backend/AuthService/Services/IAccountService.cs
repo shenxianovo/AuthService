@@ -74,5 +74,21 @@ namespace AuthService.Services
         /// Unlink an OAuth provider from a user. Fails if it's the last login method.
         /// </summary>
         Task<Result> UnlinkProviderAsync(Guid userId, AuthProviderType provider);
+
+        /// <summary>
+        /// Format-validate and check global uniqueness of a username (soft-deleted rows
+        /// included — they still hold their name under the unique index). Read-only.
+        /// </summary>
+        Task<Result> CheckUsernameAvailableAsync(string username);
+
+        /// <summary>
+        /// Rename a user. Returns false on an idempotent no-op (unchanged name);
+        /// otherwise validates format and availability, sets the new username, and
+        /// returns true. Does NOT SaveChanges (caller commits so the rename lands
+        /// atomically with the session revocation it triggers — revoke only when true).
+        /// The old name is released immediately (GitHub model); downstream services key
+        /// identity on the immutable sub, not the username (Heartbeat ADR-027).
+        /// </summary>
+        Task<Result<bool>> ChangeUsernameAsync(Guid userId, string newUsername);
     }
 }

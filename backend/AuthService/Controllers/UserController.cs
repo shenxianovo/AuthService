@@ -15,6 +15,7 @@ namespace AuthService.Controllers
         IPasswordAuthService passwordAuthService,
         IAccountService accountService,
         IUserService userService,
+        ISessionService sessionService,
         AppDbContext db) : ControllerBase
     {
         [Authorize]
@@ -46,6 +47,33 @@ namespace AuthService.Controllers
                 return NotFound();
 
             return Ok(userInfo);
+        }
+
+        [Authorize]
+        [HttpPatch("username")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
+        {
+            if (!this.TryGetUserId(out var userId))
+                return Unauthorized();
+
+            var result = await accountService.ChangeUsernameAsync(userId, request.Username);
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result.Error);
+
+            if (result.Value)
+            {
+                // Old tokens carry the stale preferred_username; force re-login
+                // everywhere. Revocation defers its commit, so the rename and the
+                // revocation land in one SaveChanges — atomic.
+                await sessionService.RevokeAllSessionsAsync(userId);
+                await db.SaveChangesAsync();
+            }
+
+            return Ok(new { message = "Username changed successfully." });
         }
 
         [Authorize]
