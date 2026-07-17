@@ -25,6 +25,7 @@
     </div>
 
     <RegisterForm
+      v-model:username="form.username"
       v-model:displayName="form.displayName"
       v-model:email="form.email"
       v-model:password="form.password"
@@ -50,7 +51,7 @@ import type { AuthResponse } from '@/api'
 
 const router = useRouter()
 
-const form = ref({ displayName: '', email: '', password: '' })
+const form = ref({ username: '', displayName: '', email: '', password: '' })
 const loading = ref(false)
 const error = ref<string | null>(null)
 
@@ -67,7 +68,7 @@ async function handleRegister() {
   error.value = null
   loading.value = true
   try {
-    const data = await api.register(form.value.displayName, form.value.email, form.value.password)
+    const data = await api.register(form.value.username, form.value.displayName, form.value.email, form.value.password)
     applyAuthResponse(data)
     await api.sendVerificationCode()
     router.push({ name: 'verify-email', query: { email: form.value.email } })

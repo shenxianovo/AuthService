@@ -13,6 +13,7 @@ import {
   UserClient,
   ApiKeyClient,
   AdminClient,
+  RegisterRequest,
   VerifyEmailRequest,
   AddEmailRequest,
   CreateApiKeyRequest,
@@ -134,8 +135,8 @@ const adminClient = new AdminClient(CLIENT_BASE, authHttp)
 
 // ---------- public API ----------
 
-export async function register(displayName: string, email: string, password: string): Promise<AuthResponse> {
-  return passwordClient.register({ displayName, email, password } as any)
+export async function register(username: string, displayName: string, email: string, password: string): Promise<AuthResponse> {
+  return passwordClient.register(new RegisterRequest({ username, displayName, email, password }))
 }
 
 export async function sendVerificationCode(email?: string): Promise<void> {
