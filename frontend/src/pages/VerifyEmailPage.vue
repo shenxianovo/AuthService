@@ -11,10 +11,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { translateApiError } from '@/i18n'
 import EmailVerificationView from '@/components/EmailVerificationView.vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -32,7 +35,7 @@ async function handleVerify(code: string) {
     await userStore.fetch()
     router.push('/dashboard/profile')
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Verification failed'
+    error.value = translateApiError(e, t('verifyEmail.failed'))
   } finally {
     loading.value = false
   }
@@ -43,7 +46,7 @@ async function handleResend() {
   try {
     await api.sendVerificationCode(emailId.value ?? undefined)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to resend code'
+    error.value = translateApiError(e, t('verifyEmail.resendFailed'))
   }
 }
 </script>

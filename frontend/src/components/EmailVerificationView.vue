@@ -1,8 +1,10 @@
 <template>
   <div class="flex flex-col gap-4">
     <p class="text-sm text-muted-foreground leading-relaxed">
-      A verification code has been sent to <strong class="text-foreground">{{ email }}</strong>.<br />
-      Please enter the 6-digit code below.
+      <i18n-t keypath="verifyEmail.sentTo" tag="span">
+        <template #email><strong class="text-foreground">{{ email }}</strong></template>
+      </i18n-t><br />
+      {{ t('verifyEmail.enterCode') }}
     </p>
 
     <form class="flex flex-col gap-3" @submit.prevent="handleVerify">
@@ -19,13 +21,13 @@
         class="text-center text-2xl font-semibold tracking-[0.3em] h-14"
       />
       <Button type="submit" class="w-full" :disabled="loading || code.length !== 6">
-        {{ loading ? 'Verifying...' : 'Verify' }}
+        {{ loading ? t('verifyEmail.verifying') : t('verifyEmail.verify') }}
       </Button>
     </form>
 
     <div class="flex justify-center">
       <Button variant="ghost" size="sm" :disabled="loading || cooldown > 0" @click="handleResend">
-        {{ cooldown > 0 ? `Resend Code (${cooldown}s)` : 'Resend Code' }}
+        {{ cooldown > 0 ? t('verifyEmail.resendIn', { seconds: cooldown }) : t('verifyEmail.resend') }}
       </Button>
     </div>
 
@@ -35,6 +37,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ComponentPublicInstance } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,6 +52,8 @@ const emit = defineEmits<{
   verify: [code: string]
   resend: []
 }>()
+
+const { t } = useI18n()
 
 const code = ref('')
 const cooldown = ref(0)

@@ -114,4 +114,14 @@ tier in a download site) live in the downstream service's own data, keyed on
 `sub`. The bootstrap admin is designated by deployment configuration.
 Avoid: "permission", "scope" (OIDC scopes are unrelated to Role).
 
+### Error code
+The stable, machine-readable name of an `AuthError` enum member, carried as
+`code` in every business-failure response body alongside the English `message`
+(see [ADR-021](docs/adr-021-error-codes-frontend-localization.md)). It is part
+of the API contract: consumers branch and localize on `code`, never by
+matching `message` text, and renaming a member is a breaking change.
+Avoid: "error message" when you mean the identifier; "status code" (that's
+the HTTP layer).
+
+
 

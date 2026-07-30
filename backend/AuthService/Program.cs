@@ -17,6 +17,11 @@ using OpenIddict.Server;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using static OpenIddict.Client.WebIntegration.OpenIddictClientWebIntegrationConstants;
 
+// Untyped [ProducesResponseType(4xx)] declarations across all controllers resolve to
+// ErrorResponse in the OpenAPI spec (they'd default to ProblemDetails otherwise),
+// so the generated TS client exposes the AuthError code on every error (ADR-021).
+[assembly: Microsoft.AspNetCore.Mvc.ProducesErrorResponseType(typeof(AuthService.DTOs.ErrorResponse))]
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();

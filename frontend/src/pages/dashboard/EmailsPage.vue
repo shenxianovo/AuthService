@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="Email Addresses" description="Manage the email addresses linked to your account." />
+    <PageHeader :title="t('emails.title')" :description="t('emails.description')" />
 
     <Card v-if="userStore.userInfo.value">
       <CardContent class="space-y-4">
@@ -12,25 +12,25 @@
           >
             <span class="text-sm text-foreground break-all">{{ email.email }}</span>
             <div class="flex items-center gap-1.5 flex-wrap">
-              <Badge v-if="email.isPrimary" variant="secondary">Primary</Badge>
-              <Badge v-if="email.isVerified" variant="default">Verified</Badge>
+              <Badge v-if="email.isPrimary" variant="secondary">{{ t('emails.primary') }}</Badge>
+              <Badge v-if="email.isVerified" variant="default">{{ t('emails.verified') }}</Badge>
               <button
                 v-else
                 :class="cn(badgeVariants({ variant: 'outline' }), 'cursor-pointer border-amber-400 text-amber-600 hover:bg-amber-50 disabled:opacity-50')"
                 :disabled="loading"
                 @click="handleVerifyEmail(email.email!)"
-              >Verify</button>
+              >{{ t('emails.verify') }}</button>
               <button
                 v-if="!email.isPrimary && email.isVerified"
                 :class="cn(badgeVariants({ variant: 'outline' }), 'cursor-pointer hover:bg-accent disabled:opacity-50')"
                 :disabled="loading"
                 @click="handleSetPrimary(email.email!)"
-              >Set Primary</button>
+              >{{ t('emails.setPrimary') }}</button>
               <button
                 v-if="!email.isPrimary"
                 class="inline-flex items-center justify-center size-[22px] rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-40"
                 :disabled="loading"
-                title="Remove email"
+                :title="t('emails.remove')"
                 @click="handleRemove(email.email!)"
               >&#x2715;</button>
             </div>
@@ -41,12 +41,12 @@
           <Input
             v-model="newEmail"
             type="email"
-            placeholder="Add new email address..."
+            :placeholder="t('emails.addPlaceholder')"
             class="flex-1"
             :disabled="loading"
             @keyup.enter="handleAdd"
           />
-          <Button size="sm" :disabled="loading || !newEmail.trim()" @click="handleAdd">Add</Button>
+          <Button size="sm" :disabled="loading || !newEmail.trim()" @click="handleAdd">{{ t('emails.add') }}</Button>
         </div>
         <p v-if="emailError" class="text-xs text-destructive">{{ emailError }}</p>
       </CardContent>
@@ -60,6 +60,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { translateApiError } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, badgeVariants } from '@/components/ui/badge'
@@ -70,6 +72,7 @@ import Toast from '@/components/Toast.vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
 
+const { t } = useI18n()
 const router = useRouter()
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -83,7 +86,7 @@ async function handleAdd() {
   const email = newEmail.value.trim()
   if (!email) return
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    emailError.value = 'Please enter a valid email address'
+    emailError.value = t('emails.invalidEmail')
     return
   }
   emailError.value = ''
@@ -95,7 +98,7 @@ async function handleAdd() {
     await userStore.fetch()
     router.push({ name: 'verify-email', query: { email, emailId: email } })
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to add email'
+    error.value = translateApiError(e, t('emails.addFailed'))
   } finally {
     loading.value = false
   }
@@ -108,7 +111,7 @@ async function handleRemove(email: string) {
     await api.removeEmail(email)
     await userStore.fetch()
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to remove email'
+    error.value = translateApiError(e, t('emails.removeFailed'))
   } finally {
     loading.value = false
   }
@@ -120,9 +123,9 @@ async function handleSetPrimary(email: string) {
   try {
     await api.setPrimaryEmail(email)
     await userStore.fetch()
-    success.value = `${email} is now your primary email`
+    success.value = t('emails.nowPrimary', { email })
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to set primary email'
+    error.value = translateApiError(e, t('emails.setPrimaryFailed'))
   } finally {
     loading.value = false
   }
@@ -135,7 +138,7 @@ async function handleVerifyEmail(email: string) {
     await api.sendVerificationCode(email)
     router.push({ name: 'verify-email', query: { email, emailId: email } })
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to send verification code'
+    error.value = translateApiError(e, t('emails.sendCodeFailed'))
   } finally {
     loading.value = false
   }

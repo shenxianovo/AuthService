@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace AuthService.Common
 {
     /// <summary>
@@ -60,6 +62,7 @@ namespace AuthService.Common
     /// HTTP status + default message for each code live in AuthErrorHttp (a single
     /// map); AuthErrorHttpMappingTests guarantees every code has an entry.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum AuthError
     {
         None = 0,

@@ -65,14 +65,14 @@ export class AdminClient implements IAdminClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 403) {
             return response.text().then((_responseText) => {
             let result403: any = null;
             let resultData403 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result403 = ProblemDetails.fromJS(resultData403);
+            result403 = ErrorResponse.fromJS(resultData403);
             return throwException("A server side error occurred.", status, _responseText, _headers, result403);
             });
         } else if (status !== 200 && status !== 204) {
@@ -158,14 +158,14 @@ export class AdminClient implements IAdminClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 409) {
             return response.text().then((_responseText) => {
             let result409: any = null;
             let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result409 = ProblemDetails.fromJS(resultData409);
+            result409 = ErrorResponse.fromJS(resultData409);
             return throwException("A server side error occurred.", status, _responseText, _headers, result409);
             });
         } else if (status !== 200 && status !== 204) {
@@ -213,14 +213,14 @@ export class AdminClient implements IAdminClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
             let result404: any = null;
             let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result404 = ProblemDetails.fromJS(resultData404);
+            result404 = ErrorResponse.fromJS(resultData404);
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
@@ -260,7 +260,7 @@ export class AdminClient implements IAdminClient {
             return response.text().then((_responseText) => {
             let result404: any = null;
             let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result404 = ProblemDetails.fromJS(resultData404);
+            result404 = ErrorResponse.fromJS(resultData404);
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
@@ -304,14 +304,14 @@ export class AdminClient implements IAdminClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
             let result404: any = null;
             let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result404 = ProblemDetails.fromJS(resultData404);
+            result404 = ErrorResponse.fromJS(resultData404);
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
@@ -378,7 +378,7 @@ export class ApiKeyClient implements IApiKeyClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -426,7 +426,7 @@ export class ApiKeyClient implements IApiKeyClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -466,14 +466,14 @@ export class ApiKeyClient implements IApiKeyClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
             let result404: any = null;
             let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result404 = ProblemDetails.fromJS(resultData404);
+            result404 = ErrorResponse.fromJS(resultData404);
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
@@ -518,7 +518,7 @@ export class ApiKeyClient implements IApiKeyClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -535,6 +535,8 @@ export interface IAuthorizationClient {
     authorizeGET(): Promise<FileResponse>;
 
     authorizePOST(): Promise<FileResponse>;
+
+    exchange(): Promise<FileResponse>;
 }
 
 export class AuthorizationClient implements IAuthorizationClient {
@@ -622,6 +624,44 @@ export class AuthorizationClient implements IAuthorizationClient {
         }
         return Promise.resolve<FileResponse>(null as any);
     }
+
+    exchange(): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/connect/token";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchange(_response);
+        });
+    }
+
+    protected processExchange(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
 }
 
 export interface IExchangeClient {
@@ -673,7 +713,7 @@ export class ExchangeClient implements IExchangeClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
@@ -741,13 +781,19 @@ export class HealthClient implements IHealthClient {
 
 export interface IOAuthClient {
 
-    githubLogin(redirectUrl: string | null | undefined, token: string | null | undefined): Promise<FileResponse>;
+    githubLogin(redirectUrl: string | null | undefined): Promise<FileResponse>;
 
-    githubCallback(code: string | undefined, state: string | null | undefined): Promise<FileResponse>;
+    googleLogin(redirectUrl: string | null | undefined): Promise<FileResponse>;
 
-    googleLogin(redirectUrl: string | null | undefined, token: string | null | undefined): Promise<FileResponse>;
+    bind(provider: string, redirectUrl: string | null | undefined): Promise<FileResponse>;
 
-    googleCallback(code: string | undefined, state: string | null | undefined): Promise<FileResponse>;
+    githubCallbackGET(): Promise<FileResponse>;
+
+    githubCallbackPOST(): Promise<FileResponse>;
+
+    googleCallbackGET(): Promise<FileResponse>;
+
+    googleCallbackPOST(): Promise<FileResponse>;
 }
 
 export class OAuthClient implements IOAuthClient {
@@ -760,12 +806,10 @@ export class OAuthClient implements IOAuthClient {
         this.baseUrl = baseUrl ?? "http://localhost:5252";
     }
 
-    githubLogin(redirectUrl: string | null | undefined, token: string | null | undefined): Promise<FileResponse> {
+    githubLogin(redirectUrl: string | null | undefined): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/v1/auth/github/login?";
         if (redirectUrl !== undefined && redirectUrl !== null)
             url_ += "redirectUrl=" + encodeURIComponent("" + redirectUrl) + "&";
-        if (token !== undefined && token !== null)
-            url_ += "token=" + encodeURIComponent("" + token) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -802,56 +846,10 @@ export class OAuthClient implements IOAuthClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    githubCallback(code: string | undefined, state: string | null | undefined): Promise<FileResponse> {
-        let url_ = this.baseUrl + "/api/v1/auth/github/callback?";
-        if (code === null)
-            throw new globalThis.Error("The parameter 'code' cannot be null.");
-        else if (code !== undefined)
-            url_ += "code=" + encodeURIComponent("" + code) + "&";
-        if (state !== undefined && state !== null)
-            url_ += "state=" + encodeURIComponent("" + state) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/octet-stream"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGithubCallback(_response);
-        });
-    }
-
-    protected processGithubCallback(response: Response): Promise<FileResponse> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<FileResponse>(null as any);
-    }
-
-    googleLogin(redirectUrl: string | null | undefined, token: string | null | undefined): Promise<FileResponse> {
+    googleLogin(redirectUrl: string | null | undefined): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/v1/auth/google/login?";
         if (redirectUrl !== undefined && redirectUrl !== null)
             url_ += "redirectUrl=" + encodeURIComponent("" + redirectUrl) + "&";
-        if (token !== undefined && token !== null)
-            url_ += "token=" + encodeURIComponent("" + token) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -888,14 +886,54 @@ export class OAuthClient implements IOAuthClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    googleCallback(code: string | undefined, state: string | null | undefined): Promise<FileResponse> {
-        let url_ = this.baseUrl + "/api/v1/auth/google/callback?";
-        if (code === null)
-            throw new globalThis.Error("The parameter 'code' cannot be null.");
-        else if (code !== undefined)
-            url_ += "code=" + encodeURIComponent("" + code) + "&";
-        if (state !== undefined && state !== null)
-            url_ += "state=" + encodeURIComponent("" + state) + "&";
+    bind(provider: string, redirectUrl: string | null | undefined): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/connect/bind/{provider}";
+        if (provider === undefined || provider === null)
+            throw new globalThis.Error("The parameter 'provider' must be defined.");
+        url_ = url_.replace("{provider}", encodeURIComponent("" + provider));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = new FormData();
+        if (redirectUrl !== null && redirectUrl !== undefined)
+            content_.append("redirectUrl", redirectUrl.toString());
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processBind(_response);
+        });
+    }
+
+    protected processBind(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+
+    githubCallbackGET(): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/v1/auth/github/callback";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -906,11 +944,125 @@ export class OAuthClient implements IOAuthClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGoogleCallback(_response);
+            return this.processGithubCallbackGET(_response);
         });
     }
 
-    protected processGoogleCallback(response: Response): Promise<FileResponse> {
+    protected processGithubCallbackGET(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+
+    githubCallbackPOST(): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/v1/auth/github/callback";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGithubCallbackPOST(_response);
+        });
+    }
+
+    protected processGithubCallbackPOST(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+
+    googleCallbackGET(): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/v1/auth/google/callback";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGoogleCallbackGET(_response);
+        });
+    }
+
+    protected processGoogleCallbackGET(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+
+    googleCallbackPOST(): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/v1/auth/google/callback";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGoogleCallbackPOST(_response);
+        });
+    }
+
+    protected processGoogleCallbackPOST(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1000,7 +1152,7 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result409: any = null;
             let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result409 = ProblemDetails.fromJS(resultData409);
+            result409 = ErrorResponse.fromJS(resultData409);
             return throwException("A server side error occurred.", status, _responseText, _headers, result409);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1045,7 +1197,7 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1120,7 +1272,7 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1161,14 +1313,14 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 401) {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1207,21 +1359,21 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 401) {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status === 429) {
             return response.text().then((_responseText) => {
             let result429: any = null;
             let resultData429 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result429 = ProblemDetails.fromJS(resultData429);
+            result429 = ErrorResponse.fromJS(resultData429);
             return throwException("A server side error occurred.", status, _responseText, _headers, result429);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1264,14 +1416,14 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 401) {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1312,14 +1464,14 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 409) {
             return response.text().then((_responseText) => {
             let result409: any = null;
             let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result409 = ProblemDetails.fromJS(resultData409);
+            result409 = ErrorResponse.fromJS(resultData409);
             return throwException("A server side error occurred.", status, _responseText, _headers, result409);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1359,7 +1511,7 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1399,7 +1551,7 @@ export class PasswordAuthClient implements IPasswordAuthClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1459,7 +1611,7 @@ export class PublicUserClient implements IPublicUserClient {
             return response.text().then((_responseText) => {
             let result404: any = null;
             let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result404 = ProblemDetails.fromJS(resultData404);
+            result404 = ErrorResponse.fromJS(resultData404);
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1522,7 +1674,7 @@ export class SessionClient implements ISessionClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1559,7 +1711,7 @@ export class SessionClient implements ISessionClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1576,6 +1728,8 @@ export interface IUserClient {
     addPassword(request: AddPasswordRequest): Promise<void>;
 
     getMe(): Promise<UserInfoResponse>;
+
+    changeUsername(request: ChangeUsernameRequest): Promise<void>;
 
     unlinkProvider(request: UnlinkProviderRequest): Promise<void>;
 }
@@ -1620,14 +1774,14 @@ export class UserClient implements IUserClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 401) {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1668,14 +1822,14 @@ export class UserClient implements IUserClient {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
             let result404: any = null;
             let resultData404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result404 = ProblemDetails.fromJS(resultData404);
+            result404 = ErrorResponse.fromJS(resultData404);
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1684,6 +1838,61 @@ export class UserClient implements IUserClient {
             });
         }
         return Promise.resolve<UserInfoResponse>(null as any);
+    }
+
+    changeUsername(request: ChangeUsernameRequest): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/auth/username";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processChangeUsername(_response);
+        });
+    }
+
+    protected processChangeUsername(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result400 = ErrorResponse.fromJS(resultData400);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result401 = ErrorResponse.fromJS(resultData401);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            let resultData409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result409 = ErrorResponse.fromJS(resultData409);
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
     }
 
     unlinkProvider(request: UnlinkProviderRequest): Promise<void> {
@@ -1716,14 +1925,14 @@ export class UserClient implements IUserClient {
             return response.text().then((_responseText) => {
             let result400: any = null;
             let resultData400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result400 = ProblemDetails.fromJS(resultData400);
+            result400 = ErrorResponse.fromJS(resultData400);
             return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 401) {
             return response.text().then((_responseText) => {
             let result401: any = null;
             let resultData401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result401 = ProblemDetails.fromJS(resultData401);
+            result401 = ErrorResponse.fromJS(resultData401);
             return throwException("A server side error occurred.", status, _responseText, _headers, result401);
             });
         } else if (status !== 200 && status !== 204) {
@@ -1829,16 +2038,11 @@ export class UserinfoClient implements IUserinfoClient {
     }
 }
 
-export class ProblemDetails implements IProblemDetails {
-    type?: string | undefined;
-    title?: string | undefined;
-    status?: number | undefined;
-    detail?: string | undefined;
-    instance?: string | undefined;
+export class ErrorResponse implements IErrorResponse {
+    code?: AuthError;
+    message?: string;
 
-    [key: string]: any;
-
-    constructor(data?: IProblemDetails) {
+    constructor(data?: IErrorResponse) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -1849,48 +2053,60 @@ export class ProblemDetails implements IProblemDetails {
 
     init(_data?: any) {
         if (_data) {
-            for (var property in _data) {
-                if (_data.hasOwnProperty(property))
-                    this[property] = _data[property];
-            }
-            this.type = _data["type"];
-            this.title = _data["title"];
-            this.status = _data["status"];
-            this.detail = _data["detail"];
-            this.instance = _data["instance"];
+            this.code = _data["code"];
+            this.message = _data["message"];
         }
     }
 
-    static fromJS(data: any): ProblemDetails {
+    static fromJS(data: any): ErrorResponse {
         data = typeof data === 'object' ? data : {};
-        let result = new ProblemDetails();
+        let result = new ErrorResponse();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        for (var property in this) {
-            if (this.hasOwnProperty(property))
-                data[property] = this[property];
-        }
-        data["type"] = this.type;
-        data["title"] = this.title;
-        data["status"] = this.status;
-        data["detail"] = this.detail;
-        data["instance"] = this.instance;
+        data["code"] = this.code;
+        data["message"] = this.message;
         return data;
     }
 }
 
-export interface IProblemDetails {
-    type?: string | undefined;
-    title?: string | undefined;
-    status?: number | undefined;
-    detail?: string | undefined;
-    instance?: string | undefined;
+export interface IErrorResponse {
+    code?: AuthError;
+    message?: string;
+}
 
-    [key: string]: any;
+export enum AuthError {
+    None = "None",
+    EmailAlreadyExists = "EmailAlreadyExists",
+    UsernameAlreadyExists = "UsernameAlreadyExists",
+    UserNotFound = "UserNotFound",
+    PasswordAlreadySet = "PasswordAlreadySet",
+    InvalidAuthCode = "InvalidAuthCode",
+    InvalidOAuthState = "InvalidOAuthState",
+    InvalidRedirectUrl = "InvalidRedirectUrl",
+    InvalidUsername = "InvalidUsername",
+    InvalidCredentials = "InvalidCredentials",
+    InvalidRefreshToken = "InvalidRefreshToken",
+    UserNotFoundForMerge = "UserNotFoundForMerge",
+    InvalidResetToken = "InvalidResetToken",
+    PasswordNotSet = "PasswordNotSet",
+    CannotUnlinkLastLoginMethod = "CannotUnlinkLastLoginMethod",
+    ProviderNotLinked = "ProviderNotLinked",
+    ApiKeyNotFound = "ApiKeyNotFound",
+    InvalidApiKey = "InvalidApiKey",
+    EmailNotFound = "EmailNotFound",
+    CannotRemovePrimaryEmail = "CannotRemovePrimaryEmail",
+    EmailNotVerified = "EmailNotVerified",
+    EmailAlreadyVerified = "EmailAlreadyVerified",
+    InvalidVerificationCode = "InvalidVerificationCode",
+    VerificationRateLimited = "VerificationRateLimited",
+    CannotDemoteLastAdmin = "CannotDemoteLastAdmin",
+    OidcClientAlreadyExists = "OidcClientAlreadyExists",
+    OidcClientNotFound = "OidcClientNotFound",
+    InvalidOidcClient = "InvalidOidcClient",
 }
 
 export class SetRoleRequest implements ISetRoleRequest {
@@ -3055,6 +3271,42 @@ export class ProviderInfo implements IProviderInfo {
 export interface IProviderInfo {
     provider?: string;
     linkedAt?: Date;
+}
+
+export class ChangeUsernameRequest implements IChangeUsernameRequest {
+    username!: string;
+
+    constructor(data?: IChangeUsernameRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.username = _data["username"];
+        }
+    }
+
+    static fromJS(data: any): ChangeUsernameRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new ChangeUsernameRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["username"] = this.username;
+        return data;
+    }
+}
+
+export interface IChangeUsernameRequest {
+    username: string;
 }
 
 export class UnlinkProviderRequest implements IUnlinkProviderRequest {

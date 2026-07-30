@@ -1,47 +1,47 @@
 <template>
   <form class="space-y-4" @submit.prevent="$emit('submit')">
     <div class="space-y-2">
-      <Label for="register-username">Username</Label>
+      <Label for="register-username">{{ t('register.username') }}</Label>
       <Input
         id="register-username"
         type="text"
         :model-value="username"
-        placeholder="your-handle"
+        :placeholder="t('register.usernamePlaceholder')"
         autocomplete="username"
         required
         minlength="3"
         maxlength="39"
         pattern="[a-z0-9](?:-?[a-z0-9]){2,38}"
-        title="3-39 characters: lowercase letters, digits and single hyphens (not at the ends)"
+        :title="t('register.usernameTitle')"
         @update:model-value="$emit('update:username', String($event).toLowerCase())"
       />
     </div>
     <div class="space-y-2">
-      <Label for="register-name">Display name</Label>
+      <Label for="register-name">{{ t('register.displayName') }}</Label>
       <Input
         id="register-name"
         type="text"
         :model-value="displayName"
-        placeholder="Your name"
+        :placeholder="t('register.displayNamePlaceholder')"
         autocomplete="name"
         required
         @update:model-value="$emit('update:displayName', String($event))"
       />
     </div>
     <div class="space-y-2">
-      <Label for="register-email">Email</Label>
+      <Label for="register-email">{{ t('common.email') }}</Label>
       <Input
         id="register-email"
         type="email"
         :model-value="email"
-        placeholder="you@example.com"
+        :placeholder="t('login.emailPlaceholder')"
         autocomplete="email"
         required
         @update:model-value="$emit('update:email', String($event))"
       />
     </div>
     <div class="space-y-2">
-      <Label for="register-password">Password</Label>
+      <Label for="register-password">{{ t('common.password') }}</Label>
       <Input
         id="register-password"
         type="password"
@@ -53,15 +53,18 @@
       />
     </div>
     <Button type="submit" class="w-full" :disabled="loading">
-      {{ loading ? 'Creating account...' : 'Create account' }}
+      {{ loading ? t('register.creating') : t('register.create') }}
     </Button>
   </form>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+
+const { t } = useI18n()
 
 defineProps<{
   username: string

@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using AuthService.Common;
+using AuthService.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,11 +11,13 @@ namespace AuthService.Extensions
         /// <summary>
         /// Convert a Result failure to the appropriate IActionResult, using the
         /// central AuthError → HTTP status/message map in <see cref="AuthErrorHttp"/>.
+        /// The body carries the stable error code alongside the English message so
+        /// clients can localize (see ADR-021).
         /// </summary>
         public static IActionResult ToErrorResponse(this ControllerBase controller, AuthError error, string? message = null)
         {
             var (status, defaultMessage) = AuthErrorHttp.Resolve(error);
-            return new ObjectResult(new { message = message ?? defaultMessage }) { StatusCode = status };
+            return new ObjectResult(new ErrorResponse(error, message ?? defaultMessage)) { StatusCode = status };
         }
     }
 

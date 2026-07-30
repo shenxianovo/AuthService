@@ -637,3 +637,4 @@ FodyWeavers.xsd
 
 # Local dev JWT keys - never commit
 backend/AuthService/Keys/
+/AuthService/

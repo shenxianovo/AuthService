@@ -1,6 +1,6 @@
 <template>
   <div>
-    <PageHeader title="Profile" :description="greeting" />
+    <PageHeader :title="t('profile.title')" :description="greeting" />
 
     <div v-if="userStore.userInfo.value" class="space-y-6">
       <!-- Profile hero -->
@@ -10,9 +10,9 @@
             {{ userInitial }}
           </div>
           <div class="min-w-0">
-            <h2 class="text-2xl font-bold text-foreground mb-0.5">{{ userStore.userInfo.value.displayName ?? 'User' }}</h2>
-            <p class="text-sm text-muted-foreground">{{ primaryEmail ?? 'No primary email' }}</p>
-            <p v-if="memberSince" class="text-xs text-muted-foreground mt-1">Member since {{ memberSince }}</p>
+            <h2 class="text-2xl font-bold text-foreground mb-0.5">{{ userStore.userInfo.value.displayName ?? t('nav.user') }}</h2>
+            <p class="text-sm text-muted-foreground">{{ primaryEmail ?? t('profile.noPrimaryEmail') }}</p>
+            <p v-if="memberSince" class="text-xs text-muted-foreground mt-1">{{ t('profile.memberSince', { date: memberSince }) }}</p>
           </div>
         </CardContent>
       </Card>
@@ -22,7 +22,7 @@
         <RouterLink to="/dashboard/emails" class="group">
           <Card class="transition-shadow group-hover:shadow-md">
             <CardContent class="space-y-1">
-              <p class="text-sm text-muted-foreground">Verified emails</p>
+              <p class="text-sm text-muted-foreground">{{ t('profile.verifiedEmails') }}</p>
               <p class="text-3xl font-bold text-foreground">{{ verifiedEmailCount }}<span class="text-base font-normal text-muted-foreground"> / {{ emailCount }}</span></p>
             </CardContent>
           </Card>
@@ -31,7 +31,7 @@
         <RouterLink to="/dashboard/providers" class="group">
           <Card class="transition-shadow group-hover:shadow-md">
             <CardContent class="space-y-1">
-              <p class="text-sm text-muted-foreground">Linked accounts</p>
+              <p class="text-sm text-muted-foreground">{{ t('profile.linkedAccounts') }}</p>
               <p class="text-3xl font-bold text-foreground">{{ providerCount }}</p>
             </CardContent>
           </Card>
@@ -40,7 +40,7 @@
         <RouterLink to="/dashboard/api-keys" class="group">
           <Card class="transition-shadow group-hover:shadow-md">
             <CardContent class="space-y-1">
-              <p class="text-sm text-muted-foreground">Active API keys</p>
+              <p class="text-sm text-muted-foreground">{{ t('profile.activeApiKeys') }}</p>
               <p class="text-3xl font-bold text-foreground">
                 <span v-if="apiKeyCount === null" class="text-muted-foreground">—</span>
                 <span v-else>{{ apiKeyCount }}</span>
@@ -53,36 +53,36 @@
       <!-- Account status -->
       <Card>
         <CardHeader>
-          <CardTitle>Account status</CardTitle>
+          <CardTitle>{{ t('profile.accountStatus') }}</CardTitle>
         </CardHeader>
         <CardContent class="space-y-3">
           <div class="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
             <div class="flex items-center gap-2.5">
               <span :class="statusDotClass(hasPassword)"></span>
-              <span class="text-sm text-foreground">Password</span>
+              <span class="text-sm text-foreground">{{ t('profile.password') }}</span>
             </div>
             <RouterLink to="/dashboard/security" class="text-sm text-muted-foreground hover:text-foreground hover:underline">
-              {{ hasPassword ? 'Set' : 'Add a password' }}
+              {{ hasPassword ? t('profile.passwordSet') : t('profile.addPassword') }}
             </RouterLink>
           </div>
 
           <div class="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
             <div class="flex items-center gap-2.5">
               <span :class="statusDotClass(allEmailsVerified)"></span>
-              <span class="text-sm text-foreground">Email verification</span>
+              <span class="text-sm text-foreground">{{ t('profile.emailVerification') }}</span>
             </div>
             <RouterLink to="/dashboard/emails" class="text-sm text-muted-foreground hover:text-foreground hover:underline">
-              {{ allEmailsVerified ? 'All verified' : `${unverifiedCount} unverified` }}
+              {{ allEmailsVerified ? t('profile.allVerified') : t('profile.unverified', { n: unverifiedCount }) }}
             </RouterLink>
           </div>
 
           <div class="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
             <div class="flex items-center gap-2.5">
               <span :class="statusDotClass(providerCount > 0)"></span>
-              <span class="text-sm text-foreground">Linked accounts</span>
+              <span class="text-sm text-foreground">{{ t('profile.linkedAccounts') }}</span>
             </div>
             <RouterLink to="/dashboard/providers" class="text-sm text-muted-foreground hover:text-foreground hover:underline">
-              {{ providerCount > 0 ? `${providerCount} connected` : 'Connect one' }}
+              {{ providerCount > 0 ? t('profile.connected', { n: providerCount }) : t('profile.connectOne') }}
             </RouterLink>
           </div>
         </CardContent>
@@ -94,10 +94,13 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import PageHeader from '@/components/PageHeader.vue'
 import { userStore } from '@/stores/user'
 import * as api from '@/api'
+
+const { t, locale } = useI18n()
 
 const apiKeyCount = ref<number | null>(null)
 
@@ -108,7 +111,7 @@ const userInitial = computed(() => {
 
 const greeting = computed(() => {
   const n = userStore.userInfo.value?.displayName
-  return n ? `Welcome back, ${n}.` : 'Welcome back.'
+  return n ? t('profile.welcome', { name: n }) : t('profile.welcomeAnon')
 })
 
 const emails = computed(() => userStore.userInfo.value?.emails ?? [])
@@ -126,7 +129,7 @@ const memberSince = computed(() => {
   if (!d) return null
   const date = d instanceof Date ? d : new Date(d as unknown as string)
   if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  return date.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
 })
 
 function statusDotClass(ok: boolean): string {

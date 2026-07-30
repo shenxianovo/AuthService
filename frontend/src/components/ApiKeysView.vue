@@ -4,35 +4,35 @@
     <div v-if="newlyCreatedKey" class="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-2.5">
       <div class="flex items-center gap-2 text-sm text-amber-800">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <strong>Copy your API key now — it won't be shown again!</strong>
+        <strong>{{ t('apiKeys.copyNow') }}</strong>
       </div>
       <div
         class="flex items-center justify-between gap-3 rounded-md bg-slate-900 px-3.5 py-3 font-mono text-xs text-emerald-400 cursor-pointer hover:bg-slate-800 transition-colors break-all"
         @click="copyKey"
       >
         <code class="flex-1 min-w-0">{{ newlyCreatedKey }}</code>
-        <span class="text-[11px] text-slate-400 whitespace-nowrap shrink-0">{{ copied ? '✓ Copied' : 'Click to copy' }}</span>
+        <span class="text-[11px] text-slate-400 whitespace-nowrap shrink-0">{{ copied ? t('apiKeys.copied') : t('apiKeys.clickToCopy') }}</span>
       </div>
-      <Button variant="outline" size="sm" @click="newlyCreatedKey = null">Dismiss</Button>
+      <Button variant="outline" size="sm" @click="newlyCreatedKey = null">{{ t('apiKeys.dismiss') }}</Button>
     </div>
 
     <!-- Toolbar: create -->
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
-        <span class="text-sm font-medium text-foreground">Your keys</span>
+        <span class="text-sm font-medium text-foreground">{{ t('apiKeys.yourKeys') }}</span>
         <!-- Mobile sort selector (desktop sorts via column headers) -->
         <select
           v-if="keys.length"
           v-model="mobileSort"
           class="md:hidden h-8 rounded-md border border-input bg-transparent px-2 text-xs text-foreground"
-          aria-label="Sort keys"
+          :aria-label="t('apiKeys.sortLabel')"
         >
-          <option value="created-desc">Newest</option>
-          <option value="created-asc">Oldest</option>
-          <option value="name-asc">Name A–Z</option>
-          <option value="name-desc">Name Z–A</option>
-          <option value="lastUsed-desc">Recently used</option>
-          <option value="status-asc">Status</option>
+          <option value="created-desc">{{ t('apiKeys.sortNewest') }}</option>
+          <option value="created-asc">{{ t('apiKeys.sortOldest') }}</option>
+          <option value="name-asc">{{ t('apiKeys.sortNameAsc') }}</option>
+          <option value="name-desc">{{ t('apiKeys.sortNameDesc') }}</option>
+          <option value="lastUsed-desc">{{ t('apiKeys.sortRecentlyUsed') }}</option>
+          <option value="status-asc">{{ t('apiKeys.sortStatus') }}</option>
         </select>
       </div>
       <div v-if="creating" class="flex items-center gap-2">
@@ -40,24 +40,24 @@
           ref="nameInput"
           v-model="newKeyName"
           type="text"
-          placeholder="Key name (e.g. Heartbeat Agent)"
+          :placeholder="t('apiKeys.keyNamePlaceholder')"
           class="h-8 w-56"
           :disabled="loading"
           maxlength="100"
           @keyup.enter="handleCreate"
           @keyup.escape="cancelCreate"
         />
-        <Button size="sm" :disabled="loading || !newKeyName.trim()" @click="handleCreate">Create</Button>
-        <Button variant="ghost" size="sm" :disabled="loading" @click="cancelCreate">Cancel</Button>
+        <Button size="sm" :disabled="loading || !newKeyName.trim()" @click="handleCreate">{{ t('apiKeys.create') }}</Button>
+        <Button variant="ghost" size="sm" :disabled="loading" @click="cancelCreate">{{ t('apiKeys.cancel') }}</Button>
       </div>
       <Button v-else size="sm" @click="startCreate">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New key
+        {{ t('apiKeys.newKey') }}
       </Button>
     </div>
 
     <!-- Empty state -->
-    <p v-if="!keys.length" class="text-sm text-muted-foreground py-4 text-center">No API keys yet</p>
+    <p v-if="!keys.length" class="text-sm text-muted-foreground py-4 text-center">{{ t('apiKeys.none') }}</p>
 
     <!-- Table (md+) -->
     <div v-else class="hidden md:block">
@@ -66,23 +66,23 @@
           <TableRow>
             <TableHead>
               <button class="inline-flex items-center gap-1 hover:text-foreground transition-colors" @click="toggleSort('name')">
-                Name <span class="text-xs">{{ sortIndicator('name') }}</span>
+                {{ t('apiKeys.colName') }} <span class="text-xs">{{ sortIndicator('name') }}</span>
               </button>
             </TableHead>
-            <TableHead>Key</TableHead>
+            <TableHead>{{ t('apiKeys.colKey') }}</TableHead>
             <TableHead>
               <button class="inline-flex items-center gap-1 hover:text-foreground transition-colors" @click="toggleSort('created')">
-                Created <span class="text-xs">{{ sortIndicator('created') }}</span>
+                {{ t('apiKeys.colCreated') }} <span class="text-xs">{{ sortIndicator('created') }}</span>
               </button>
             </TableHead>
             <TableHead>
               <button class="inline-flex items-center gap-1 hover:text-foreground transition-colors" @click="toggleSort('lastUsed')">
-                Last used <span class="text-xs">{{ sortIndicator('lastUsed') }}</span>
+                {{ t('apiKeys.colLastUsed') }} <span class="text-xs">{{ sortIndicator('lastUsed') }}</span>
               </button>
             </TableHead>
             <TableHead>
               <button class="inline-flex items-center gap-1 hover:text-foreground transition-colors" @click="toggleSort('status')">
-                Status <span class="text-xs">{{ sortIndicator('status') }}</span>
+                {{ t('apiKeys.colStatus') }} <span class="text-xs">{{ sortIndicator('status') }}</span>
               </button>
             </TableHead>
             <TableHead class="w-px"></TableHead>
@@ -95,16 +95,16 @@
               <code class="text-xs text-muted-foreground font-mono bg-secondary px-2 py-0.5 rounded">{{ key.prefix }}</code>
             </TableCell>
             <TableCell class="text-muted-foreground">{{ formatDate(key.createdAt) }}</TableCell>
-            <TableCell class="text-muted-foreground">{{ key.lastUsedAt ? formatRelative(key.lastUsedAt) : 'Never' }}</TableCell>
+            <TableCell class="text-muted-foreground">{{ key.lastUsedAt ? formatRelative(key.lastUsedAt) : t('apiKeys.never') }}</TableCell>
             <TableCell>
-              <Badge :variant="key.isRevoked ? 'destructive' : 'default'">{{ key.isRevoked ? 'Revoked' : 'Active' }}</Badge>
+              <Badge :variant="key.isRevoked ? 'destructive' : 'default'">{{ key.isRevoked ? t('apiKeys.revoked') : t('apiKeys.active') }}</Badge>
             </TableCell>
             <TableCell class="text-right">
               <button
                 v-if="!key.isRevoked"
                 class="inline-flex items-center justify-center size-[22px] rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-40"
                 :disabled="loading"
-                title="Revoke key"
+                :title="t('apiKeys.revokeTitle')"
                 @click="handleRevoke(key.id!, key.name!)"
               >&#x2715;</button>
             </TableCell>
@@ -123,19 +123,19 @@
         <div class="flex items-center justify-between gap-2">
           <span class="text-sm font-medium text-foreground">{{ key.name }}</span>
           <div class="flex items-center gap-2">
-            <Badge :variant="key.isRevoked ? 'destructive' : 'default'">{{ key.isRevoked ? 'Revoked' : 'Active' }}</Badge>
+            <Badge :variant="key.isRevoked ? 'destructive' : 'default'">{{ key.isRevoked ? t('apiKeys.revoked') : t('apiKeys.active') }}</Badge>
             <button
               v-if="!key.isRevoked"
               class="inline-flex items-center justify-center size-[22px] rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-40"
               :disabled="loading"
-              title="Revoke key"
+              :title="t('apiKeys.revokeTitle')"
               @click="handleRevoke(key.id!, key.name!)"
             >&#x2715;</button>
           </div>
         </div>
         <code class="block text-xs text-muted-foreground font-mono bg-secondary px-2 py-0.5 rounded w-fit">{{ key.prefix }}</code>
         <div class="text-xs text-muted-foreground">
-          Created {{ formatDate(key.createdAt) }} · {{ key.lastUsedAt ? `Last used ${formatRelative(key.lastUsedAt)}` : 'Never used' }}
+          {{ t('apiKeys.createdOn', { date: formatDate(key.createdAt) }) }} · {{ key.lastUsedAt ? t('apiKeys.lastUsedRel', { rel: formatRelative(key.lastUsedAt) }) : t('apiKeys.neverUsed') }}
         </div>
       </div>
     </div>
@@ -144,6 +144,8 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { translateApiError } from '@/i18n'
 import type { ComponentPublicInstance } from 'vue'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -164,6 +166,8 @@ const emit = defineEmits<{
   success: [message: string]
   'update:loading': [value: boolean]
 }>()
+
+const { t, locale } = useI18n()
 
 const keys = ref<ApiKeyListItem[]>([])
 const newKeyName = ref('')
@@ -242,7 +246,7 @@ async function loadKeys() {
   try {
     keys.value = await api.listApiKeys()
   } catch (e: unknown) {
-    emit('error', e instanceof Error ? e.message : 'Failed to load API keys')
+    emit('error', translateApiError(e, t('apiKeys.loadFailed')))
   }
 }
 
@@ -267,23 +271,23 @@ async function handleCreate() {
     newKeyName.value = ''
     creating.value = false
     await loadKeys()
-    emit('success', `API key "${result.name}" created`)
+    emit('success', t('apiKeys.createdMsg', { name: result.name }))
   } catch (e: unknown) {
-    emit('error', e instanceof Error ? e.message : 'Failed to create API key')
+    emit('error', translateApiError(e, t('apiKeys.createFailed')))
   } finally {
     emit('update:loading', false)
   }
 }
 
 async function handleRevoke(id: string, name: string) {
-  if (!confirm(`Revoke API key "${name}"? This cannot be undone.`)) return
+  if (!confirm(t('apiKeys.confirmRevoke', { name }))) return
   emit('update:loading', true)
   try {
     await api.revokeApiKey(id)
     await loadKeys()
-    emit('success', `API key "${name}" revoked`)
+    emit('success', t('apiKeys.revokedMsg', { name }))
   } catch (e: unknown) {
-    emit('error', e instanceof Error ? e.message : 'Failed to revoke API key')
+    emit('error', translateApiError(e, t('apiKeys.revokeFailed')))
   } finally {
     emit('update:loading', false)
   }
@@ -301,7 +305,7 @@ async function copyKey() {
 
 function formatDate(date: unknown): string {
   const d = date instanceof Date ? date : new Date(date as string)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function formatRelative(date: unknown): string {
@@ -311,10 +315,10 @@ function formatRelative(date: unknown): string {
   const min = Math.floor(sec / 60)
   const hr = Math.floor(min / 60)
   const day = Math.floor(hr / 24)
-  if (sec < 60) return 'Just now'
-  if (min < 60) return `${min}m ago`
-  if (hr < 24) return `${hr}h ago`
-  if (day < 30) return `${day}d ago`
+  if (sec < 60) return t('apiKeys.justNow')
+  if (min < 60) return t('apiKeys.minutesAgo', { n: min })
+  if (hr < 24) return t('apiKeys.hoursAgo', { n: hr })
+  if (day < 30) return t('apiKeys.daysAgo', { n: day })
   return formatDate(d)
 }
 

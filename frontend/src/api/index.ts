@@ -29,7 +29,6 @@ export type {
   UserInfoResponse,
   EmailInfo,
   ProviderInfo,
-  ProblemDetails,
   CreateApiKeyResponse,
   ApiKeyListItem,
   OidcClientSummary,
@@ -37,7 +36,7 @@ export type {
   RegenerateSecretResponse,
 } from './client'
 
-export { ApiException } from './client'
+export { ApiException, ErrorResponse, AuthError } from './client'
 
 import type { AuthResponse } from './client'
 
